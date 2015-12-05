@@ -1,0 +1,1269 @@
+' *****************************************************************************
+' JT Quadcopter
+'
+'  - register aliases
+'  - functions in flash memory
+' *****************************************************************************
+
+' =========================================================================================================================================
+' um-fpu v3.1
+'   - has 128 general purpose registers
+'   - has 8 temporary registers (they cannot be accessed directly and are used by left and right parentheses to store temporary values)
+'   - Reg0: temporary register 0 only holds temporary values since it is modified by many instructions
+'   - Reg1 to Reg127: temporary_1 .. temporary_9 are my temporary defined registers (may not need)
+' 
+' RegA: Working register or accumulator register
+' 
+' RegX: Register X is used to reference a series of sequential registers. The register X selection is automatically incremented
+'       to the next register in sequence by all instructions that use register X. Any register can be selected as register X
+'       using the SELECTX instruction.
+'
+' EEPROM: - User functions can be stored in flash memory or in eeprom
+'         - Values can be stored in eeprom (addresses range from 0 to 255)
+'         - 1024 bytes EEPROM for data storage or user-defined functions
+'
+' Flash Memory: 2304 bytes Flash memory for user-defined functions (according to the datasheet)
+'               2044 bytes Flash memory available for user-defined functions (according to experience)
+'
+' =========================================================================================================================================
+
+
+' =========================================================================================================================================
+' Register aliases
+' =========================================================================================================================================
+
+'reg0											Used by many FPU functions as temporary storage. It can be used if needed.
+
+temporary_1 										equ F1
+temporary_2 										equ F2
+temporary_3 										equ F3
+temporary_4 										equ F4
+temporary_5 										equ F5
+temporary_6 										equ F6
+temporary_7 										equ F7
+temporary_8 										equ F8
+temporary_9 										equ F9
+temporary_10										equ F10
+temporary_11										equ F11
+temporary_12										equ F12
+temporary_13										equ F13
+temporary_14										equ F14
+temporary_15										equ F15
+temporary_16										equ F16
+temporary_17										equ F17
+temporary_18										equ F18
+temporary_19										equ F19
+temporary_20										equ F20
+temporary_21										equ F21
+temporary_22										equ F22
+temporary_23										equ F23
+temporary_24										equ F24
+temporary_25										equ F25
+temporary_26										equ F26
+temporary_27										equ F27
+temporary_28										equ F28
+temporary_29										equ F29
+temporary_30										equ F30
+
+accel_x		 										equ F31
+accel_y 											equ F32
+accel_z 											equ F33
+accel_ms2_x 										equ F37
+accel_ms2_y 										equ F38
+accel_ms2_z 										equ F39
+accel_x_sum_of_samples 								equ F40
+accel_y_sum_of_samples 								equ F41
+accel_z_sum_of_samples 								equ F42
+accel_number_of_samples 							equ F43
+accel_filtered_x 									equ F44
+accel_filtered_y 									equ F45
+accel_filtered_z 									equ F46
+accel_actual_one_g									equ F48
+lpf_cheby2_fourth_order_input_tm1_x 				equ F58
+lpf_cheby2_fourth_order_input_tm2_x 				equ F59
+lpf_cheby2_fourth_order_input_tm3_x 				equ F60
+lpf_cheby2_fourth_order_input_tm4_x 				equ F61
+lpf_cheby2_fourth_order_output_tm1_x 				equ F62
+lpf_cheby2_fourth_order_output_tm2_x 				equ F63
+lpf_cheby2_fourth_order_output_tm3_x 				equ F64
+lpf_cheby2_fourth_order_output_tm4_x 				equ F65
+lpf_cheby2_fourth_order_input_tm1_y 				equ F66
+lpf_cheby2_fourth_order_input_tm2_y 				equ F67
+lpf_cheby2_fourth_order_input_tm3_y 				equ F68
+lpf_cheby2_fourth_order_input_tm4_y 				equ F69
+lpf_cheby2_fourth_order_output_tm1_y 				equ F70
+lpf_cheby2_fourth_order_output_tm2_y 				equ F71
+lpf_cheby2_fourth_order_output_tm3_y 				equ F72
+lpf_cheby2_fourth_order_output_tm4_y 				equ F73
+lpf_cheby2_fourth_order_input_tm1_z 				equ F74
+lpf_cheby2_fourth_order_input_tm2_z 				equ F75
+lpf_cheby2_fourth_order_input_tm3_z 				equ F76
+lpf_cheby2_fourth_order_input_tm4_z 				equ F77
+lpf_cheby2_fourth_order_output_tm1_z 				equ F78
+lpf_cheby2_fourth_order_output_tm2_z 				equ F79
+lpf_cheby2_fourth_order_output_tm3_z 				equ F80
+lpf_cheby2_fourth_order_output_tm4_z 				equ F81
+
+gyro_x_sum_of_samples 								equ F82
+gyro_y_sum_of_samples 								equ F83
+gyro_z_sum_of_samples 								equ F84
+gyro_number_of_samples 								equ F85
+gyro_filtered_x 									equ F86
+gyro_filtered_y 									equ F87
+gyro_filtered_z 									equ F88
+gyro_heading 										equ F90
+gyro_x 												equ F91
+gyro_y 												equ F92
+gyro_z 												equ F93
+
+kinematics_angle_x 									equ F94			' used by accelerometer
+kinematics_angle_y 									equ F95
+kinematics_angle_z 									equ F96
+kinematics_q0 										equ F97
+kinematics_q1 										equ F98
+kinematics_q2 										equ F99
+kinematics_q3 										equ F100
+kinematics_exint 									equ F101
+kinematics_eyint 									equ F102
+kinematics_ezint 									equ F103
+kinematics_previous_ex 								equ F104
+kinematics_previous_ey 								equ F105
+kinematics_previous_ez 								equ F106
+
+mag_x 												equ F107
+mag_y 												equ F108
+mag_z 												equ F109
+mag_tilt_compensated_x								equ F110		' used during offset calculations only, calc by hand, used to calculate mag_heading_x and mag_heading_y
+mag_tilt_compensated_y								equ F111		' used during offset calculations only, calc by hand, used to calculate mag_heading_x and mag_heading_y
+mag_measured_x										equ F114
+mag_measured_y										equ F115
+mag_measured_z										equ F116
+mag_heading_x										equ F117
+mag_heading_y										equ F118
+mag_kinematics_lq0									equ F119
+mag_kinematics_lq1									equ F120
+mag_kinematics_lq2									equ F121
+mag_kinematics_lq3									equ F122
+mag_kinematics_lexint								equ F123
+mag_kinematics_leyint								equ F124
+mag_kinematics_lezint								equ F125
+mag_true_north_heading								equ F126 		'it's actually magnetic north right now since the declination has not been applied
+' last register 127 is free
+
+' =========================================================================================================================================
+' Function prototypes
+' =========================================================================================================================================
+AccelSum func 0
+AccelEvaluateMS2 func %
+AccelComputeFourthOrder func %
+GyroEvaluateRate func %
+GyroSum func %
+KinematicsArgUpdate func %
+KinematicsEulerAngles func %
+MagMeasure func %
+MagCalculateHeading func %
+MagCalculatePositiveHeading func %
+MagCalculateAbosulteHeading func %
+
+AccelInitFourthOrder eefunc 0
+MagInitializeHeadingFusion eefunc 26
+GyroResetSum eefunc 72
+AccelResetSum eefunc 75
+AccelComputeBias eefunc 78
+
+' =========================================================================================================================================
+' Flash Memory Functions
+' =========================================================================================================================================
+
+' -------------------------------------------------------------
+' Function 0: AccelSum
+'   - Add current accel vector to sum vector and increment the
+'     number of samples by 1
+' -------------------------------------------------------------
+#function AccelSum
+accel_x_sum_of_samples = accel_x_sum_of_samples + accel_x
+accel_y_sum_of_samples = accel_y_sum_of_samples + accel_y
+accel_z_sum_of_samples = accel_z_sum_of_samples + accel_z
+accel_number_of_samples = accel_number_of_samples + 1
+
+' -------------------------------------------------------------
+' Function 1: AccelEvaluateMS2
+' -------------------------------------------------------------
+#function AccelEvaluateMS2
+accel_ms2_scale_x			equ temporary_1
+accel_ms2_scale_y			equ temporary_2
+accel_ms2_scale_z			equ temporary_3
+accel_offset_x				equ temporary_4
+accel_offset_y				equ temporary_5
+accel_offset_z				equ temporary_6
+
+#asm
+' Do not divide by zero
+' IF accel_number_of_samples == 0
+' GOTO _end
+SELECTA, accel_number_of_samples
+FCMPI, 0
+BRA, Z, _end
+
+EELOAD, accel_ms2_scale_x, 252
+EELOAD, accel_ms2_scale_y, 251
+EELOAD, accel_ms2_scale_z, 250
+EELOAD, accel_offset_x, 255
+EELOAD, accel_offset_y, 254
+EELOAD, accel_offset_z, 253
+#endasm
+
+accel_x_sum_of_samples = ((accel_x_sum_of_samples / accel_number_of_samples) * accel_ms2_scale_x) + accel_offset_x
+accel_y_sum_of_samples = ((accel_y_sum_of_samples / accel_number_of_samples) * accel_ms2_scale_y) + accel_offset_y
+accel_z_sum_of_samples = ((accel_z_sum_of_samples / accel_number_of_samples) * accel_ms2_scale_z) + accel_offset_z
+
+accel_ms2_x = accel_x_sum_of_samples
+accel_ms2_y = accel_y_sum_of_samples
+accel_ms2_z = accel_z_sum_of_samples
+
+#asm
+_end:
+CLR, accel_x_sum_of_samples
+CLR, accel_y_sum_of_samples
+CLR, accel_z_sum_of_samples
+CLR, accel_number_of_samples
+
+#endasm
+
+' -------------------------------------------------------------
+' Function 2: AccelComputeFourthOrder
+' -------------------------------------------------------------
+#function AccelComputeFourthOrder
+output						equ temporary_1
+input_x					equ accel_ms2_x
+input_y					equ accel_ms2_y
+input_z					equ accel_ms2_z
+lpf_cheby2_b0			equ temporary_2
+lpf_cheby2_b1			equ temporary_3
+lpf_cheby2_b2			equ temporary_4
+lpf_cheby2_b3			equ temporary_5
+lpf_cheby2_b4			equ temporary_6
+lpf_cheby2_a1			equ temporary_7
+lpf_cheby2_a2			equ temporary_8
+lpf_cheby2_a3			equ temporary_9
+lpf_cheby2_a4			equ temporary_10
+
+#asm
+
+' cheby2(4, 60, 12.5/50)
+
+EELOAD, lpf_cheby2_b0, 238
+EELOAD, lpf_cheby2_b1, 237
+EELOAD, lpf_cheby2_b2, 236
+EELOAD, lpf_cheby2_b3, 235
+EELOAD, lpf_cheby2_b4, 234
+EELOAD, lpf_cheby2_a1, 233
+EELOAD, lpf_cheby2_a2, 232
+EELOAD, lpf_cheby2_a3, 231
+EELOAD, lpf_cheby2_a4, 230
+#endasm
+
+' x -----------------------------------
+output = (lpf_cheby2_b0 * input_x) + (lpf_cheby2_b1 * lpf_cheby2_fourth_order_input_tm1_x) + (lpf_cheby2_b2 * lpf_cheby2_fourth_order_input_tm2_x) + (lpf_cheby2_b3 * lpf_cheby2_fourth_order_input_tm3_x) + (lpf_cheby2_b4 * lpf_cheby2_fourth_order_input_tm4_x) - (lpf_cheby2_a1 * lpf_cheby2_fourth_order_output_tm1_x) - (lpf_cheby2_a2 * lpf_cheby2_fourth_order_output_tm2_x) - (lpf_cheby2_a3 * lpf_cheby2_fourth_order_output_tm3_x) - (lpf_cheby2_a4 * lpf_cheby2_fourth_order_output_tm4_x)
+
+lpf_cheby2_fourth_order_input_tm4_x = lpf_cheby2_fourth_order_input_tm3_x
+lpf_cheby2_fourth_order_input_tm3_x = lpf_cheby2_fourth_order_input_tm2_x
+lpf_cheby2_fourth_order_input_tm2_x = lpf_cheby2_fourth_order_input_tm1_x
+lpf_cheby2_fourth_order_input_tm1_x = input_x
+
+lpf_cheby2_fourth_order_output_tm4_x = lpf_cheby2_fourth_order_output_tm3_x
+lpf_cheby2_fourth_order_output_tm3_x = lpf_cheby2_fourth_order_output_tm2_x
+lpf_cheby2_fourth_order_output_tm2_x = lpf_cheby2_fourth_order_output_tm1_x
+lpf_cheby2_fourth_order_output_tm1_x = output
+
+accel_filtered_x = output
+
+' y -----------------------------------
+output = (lpf_cheby2_b0 * input_y) + (lpf_cheby2_b1 * lpf_cheby2_fourth_order_input_tm1_y) + (lpf_cheby2_b2 * lpf_cheby2_fourth_order_input_tm2_y) + (lpf_cheby2_b3 * lpf_cheby2_fourth_order_input_tm3_y) + (lpf_cheby2_b4 * lpf_cheby2_fourth_order_input_tm4_y) - (lpf_cheby2_a1 * lpf_cheby2_fourth_order_output_tm1_y) - (lpf_cheby2_a2 * lpf_cheby2_fourth_order_output_tm2_y) - (lpf_cheby2_a3 * lpf_cheby2_fourth_order_output_tm3_y) - (lpf_cheby2_a4 * lpf_cheby2_fourth_order_output_tm4_y)
+
+lpf_cheby2_fourth_order_input_tm4_y = lpf_cheby2_fourth_order_input_tm3_y
+lpf_cheby2_fourth_order_input_tm3_y = lpf_cheby2_fourth_order_input_tm2_y
+lpf_cheby2_fourth_order_input_tm2_y = lpf_cheby2_fourth_order_input_tm1_y
+lpf_cheby2_fourth_order_input_tm1_y = input_y
+
+lpf_cheby2_fourth_order_output_tm4_y = lpf_cheby2_fourth_order_output_tm3_y
+lpf_cheby2_fourth_order_output_tm3_y = lpf_cheby2_fourth_order_output_tm2_y
+lpf_cheby2_fourth_order_output_tm2_y = lpf_cheby2_fourth_order_output_tm1_y
+lpf_cheby2_fourth_order_output_tm1_y = output
+
+accel_filtered_y = output
+
+' z -----------------------------------
+output = (lpf_cheby2_b0 * input_z) + (lpf_cheby2_b1 * lpf_cheby2_fourth_order_input_tm1_z) + (lpf_cheby2_b2 * lpf_cheby2_fourth_order_input_tm2_z) + (lpf_cheby2_b3 * lpf_cheby2_fourth_order_input_tm3_z) + (lpf_cheby2_b4 * lpf_cheby2_fourth_order_input_tm4_z) - (lpf_cheby2_a1 * lpf_cheby2_fourth_order_output_tm1_z) - (lpf_cheby2_a2 * lpf_cheby2_fourth_order_output_tm2_z) - (lpf_cheby2_a3 * lpf_cheby2_fourth_order_output_tm3_z) - (lpf_cheby2_a4 * lpf_cheby2_fourth_order_output_tm4_z)
+
+lpf_cheby2_fourth_order_input_tm4_z = lpf_cheby2_fourth_order_input_tm3_z
+lpf_cheby2_fourth_order_input_tm3_z = lpf_cheby2_fourth_order_input_tm2_z
+lpf_cheby2_fourth_order_input_tm2_z = lpf_cheby2_fourth_order_input_tm1_z
+lpf_cheby2_fourth_order_input_tm1_z = input_z
+
+lpf_cheby2_fourth_order_output_tm4_z = lpf_cheby2_fourth_order_output_tm3_z
+lpf_cheby2_fourth_order_output_tm3_z = lpf_cheby2_fourth_order_output_tm2_z
+lpf_cheby2_fourth_order_output_tm2_z = lpf_cheby2_fourth_order_output_tm1_z
+lpf_cheby2_fourth_order_output_tm1_z = output
+
+accel_filtered_z = output
+
+
+' -------------------------------------------------------------
+' Function 3: GyroEvaluateRate
+' -------------------------------------------------------------
+#function GyroEvaluateRate
+one_degree_in_radians		equ temporary_1
+neg_one_degree_in_radians	equ temporary_2
+time_elapsed				equ temporary_3
+gyro_offset_x				equ temporary_4
+gyro_offset_y				equ temporary_5
+gyro_offset_z				equ temporary_6
+gyro_scale_factor			equ temporary_7
+
+#asm
+' Do not divide by zero
+' IF gyro_number_of_samples == 0
+' GOTO _end
+SELECTA, gyro_number_of_samples
+FCMPI, 0
+BRA, Z, _end
+
+EELOAD, gyro_offset_x, 249
+EELOAD, gyro_offset_y, 248
+EELOAD, gyro_offset_z, 247
+EELOAD, gyro_scale_factor, 246
+#endasm
+
+' x axis
+' gyro_rate = ((sum_of_samples / num_of_samples) - offset) * scalefactor
+gyro_filtered_x = ((gyro_x_sum_of_samples / gyro_number_of_samples) - gyro_offset_x) * gyro_scale_factor
+
+' y axis
+' gyro_rate = -1*((sum_of_samples / num_of_samples) - offset) * scalefactor
+' or, gyro_rate = (-(sum_of_samples / num_of_samples) + offset) * scalefactor
+gyro_filtered_y = (-(gyro_y_sum_of_samples / gyro_number_of_samples) + gyro_offset_y) * gyro_scale_factor
+
+' z axis
+' gyro_rate = -1*((sum_of_samples / num_of_samples) - offset) * scalefactor
+' or, gyro_rate = (-(sum_of_samples / num_of_samples) + offset) * scalefactor
+gyro_filtered_z = (-(gyro_z_sum_of_samples / gyro_number_of_samples) + gyro_offset_z) * gyro_scale_factor
+
+#asm
+' Calculate gyro heading
+' If (gyro rate z > radians(1.0) || gyro rate z < radians(-1.0)) THEN update gyro heading
+' Else do nothing
+SELECTA, one_degree_in_radians
+FSETI, 1
+RADIANS
+FCMP, gyro_filtered_z
+BRA, LT, _updateGyroHeading
+
+SELECTA, neg_one_degree_in_radians
+FSETI, -1
+RADIANS
+FCMP, gyro_filtered_z
+BRA, GT, _updateGyroHeading
+BRA, _end
+
+_updateGyroHeading:
+SELECTA, time_elapsed
+FMUL, gyro_filtered_z
+SELECTA, gyro_heading
+FADD, time_elapsed
+
+_end:
+CLR, gyro_x_sum_of_samples
+CLR, gyro_y_sum_of_samples
+CLR, gyro_z_sum_of_samples
+CLR, gyro_number_of_samples
+#endasm
+
+
+' -------------------------------------------------------------
+' Function 4: GyroSum
+' -------------------------------------------------------------
+#function GyroSum
+gyro_x_sum_of_samples = gyro_x_sum_of_samples + gyro_x
+gyro_y_sum_of_samples = gyro_y_sum_of_samples + gyro_y
+gyro_z_sum_of_samples = gyro_z_sum_of_samples + gyro_z
+gyro_number_of_samples = gyro_number_of_samples + 1
+
+' -------------------------------------------------------------
+' Function 5: KinematicsArgUpdate
+' -------------------------------------------------------------
+#function KinematicsArgUpdate
+halfT 		equ temporary_1
+norm 		equ temporary_2
+vx 			equ temporary_3
+vy			equ temporary_4
+vz			equ temporary_5
+q0i			equ temporary_6
+q1i			equ temporary_7
+q2i			equ temporary_8
+q3i			equ temporary_9
+ex			equ temporary_10
+ey			equ temporary_11
+ez			equ temporary_12
+Ki			equ temporary_13
+Kp			equ temporary_14
+temp_x		equ temporary_15	' used for ax and gx
+temp_y		equ temporary_16	' used for ay and gy
+temp_z		equ temporary_17	' used for az and gz
+
+' G_Dt = halfT / 2
+halfT = halfT / 2
+
+' Normalise the accel measurements ----------------------------
+' norm = sqrt(ax^2 + ay^2 + az^2)
+norm = sqrt((accel_filtered_x**2) + (accel_filtered_y**2) + (accel_filtered_z**2))
+
+' ax = ax / norm (ax = accel_filtered_x)
+temp_x = accel_filtered_x / norm
+
+' ay = ay / norm (ay = accel_filtered_y)
+temp_y = accel_filtered_y / norm
+
+' az = az / norm (az = accel_filtered_z)
+temp_z = accel_filtered_z / norm
+
+' Estimated direction of gravity and flux (v and w) -----------
+' vx = 2*(q1*q3 - q0*q2)
+vx = 2 * ((kinematics_q1 * kinematics_q3) - (kinematics_q0 * kinematics_q2))
+
+' vy = 2*(q0*q1 + q2*q3)
+vy = 2 * ((kinematics_q0 * kinematics_q1) + (kinematics_q2 * kinematics_q3))
+
+' vz = q0*q0 - q1*q1 - q2*q2 + q3*q3
+vz = (kinematics_q0**2) - (kinematics_q1**2) - (kinematics_q2**2) + (kinematics_q3**2)
+
+' Error is sum of cross product between reference direction 
+' of fields and direction measured by sensors
+' ex = (vy*az - vz*ay)
+ex = (vy * temp_z) - (vz * temp_y)
+
+' ey = (vz*ax - vx*az)
+ey = (vz * temp_x) - (vx * temp_z)
+
+' ez = (vx*ay - vy*ax)
+ez = (vx * temp_y) - (vy * temp_x)
+
+#asm
+' Integral error scaled integral gain -------------------------
+
+' ---------------------------------------------------------------------------------------
+' IF ((previous_ex > 0 &&  ex < 0) || (previous_ex < 0 &&  ex > 0)) --> exInt = 0
+' ELSE --> exInt = exInt + ex*Ki
+SELECTA, kinematics_previous_ex, FCMPI, 0
+BRA, LE, _condition2_x
+SELECTA, ex, FCMPI, 0
+BRA, GE, _condition2_x
+BRA, _true_x
+
+_condition2_x:
+SELECTA, kinematics_previous_ex, FCMPI, 0
+BRA, GE, _false_x
+SELECTA, ex, FCMPI, 0
+BRA, LE, _false_x
+
+_true_x:
+SELECTA, kinematics_exint
+FSETI, 0
+BRA, _end_x
+
+_false_x:
+SELECTA, kinematics_exint
+LEFT, FSET, ex, FMUL, Ki, RIGHT
+FADD0
+
+_end_x:
+COPY, ex, kinematics_previous_ex
+
+' ---------------------------------------------------------------------------------------
+' IF ((previous_ey > 0 &&  ey < 0) || (previous_ey < 0 &&  ey > 0)) --> eyInt = 0
+' ELSE --> eyInt = eyInt + ey*Ki
+SELECTA, kinematics_previous_ey, FCMPI, 0
+BRA, LE, _condition2_y
+SELECTA, ey, FCMPI, 0
+BRA, GE, _condition2_y
+BRA, _true_y
+
+_condition2_y:
+SELECTA, kinematics_previous_ey, FCMPI, 0
+BRA, GE, _false_y
+SELECTA, ey, FCMPI, 0
+BRA, LE, _false_y
+
+_true_y:
+SELECTA, kinematics_eyint
+FSETI, 0
+BRA, _end_y
+
+_false_y:
+SELECTA, kinematics_eyint
+LEFT, FSET, ey, FMUL, Ki, RIGHT
+FADD0
+
+_end_y:
+COPY, ey, kinematics_previous_ey
+
+' ---------------------------------------------------------------------------------------
+' IF ((previous_ez > 0 &&  ez < 0) || (previous_ez < 0 &&  ez > 0)) --> ezInt = 0
+' ELSE --> ezInt = ezInt + ez*Ki
+SELECTA, kinematics_previous_ez, FCMPI, 0
+BRA, LE, _condition2_z
+SELECTA, ez, FCMPI, 0
+BRA, GE, _condition2_z
+BRA, _true_z
+
+_condition2_z:
+SELECTA, kinematics_previous_ez, FCMPI, 0
+BRA, GE, _false_z
+SELECTA, ez, FCMPI, 0
+BRA, LE, _false_z
+
+_true_z:
+SELECTA, kinematics_ezint
+FSETI, 0
+BRA, _end_z
+
+_false_z:
+SELECTA, kinematics_ezint
+LEFT, FSET, ez, FMUL, Ki, RIGHT
+FADD0
+
+_end_z:
+COPY, ez, kinematics_previous_ez
+#endasm
+
+' ---------------------------------------------------------------------------------------
+' Adjusted gyroscope measurements
+' gx = gx + Kp*ex + exInt
+temp_x = gyro_filtered_x + (Kp * ex) + kinematics_exint
+
+' gy = gy + Kp*ey + eyInt
+temp_y = gyro_filtered_y + (Kp * ey) + kinematics_eyint
+
+' gz = gz + Kp*ez + ezInt
+temp_z = gyro_filtered_z + (Kp * ez) + kinematics_ezint
+
+' ---------------------------------------------------------------------------------------
+' Integrate quaternion rate and normalise
+' q0i = (-q1*gx - q2*gy - q3*gz) * halfT
+q0i = ((-kinematics_q1 * temp_x) - (kinematics_q2 * temp_y) - (kinematics_q3 * temp_z)) * halfT
+
+' q1i = ( q0*gx + q2*gz - q3*gy) * halfT
+q1i = ((kinematics_q0 * temp_x) + (kinematics_q2 * temp_z) - (kinematics_q3 * temp_y)) * halfT
+
+' q2i = ( q0*gy - q1*gz + q3*gx) * halfT
+q2i = ((kinematics_q0 * temp_y) - (kinematics_q1 * temp_z) + (kinematics_q3 * temp_x)) * halfT
+
+' q3i = ( q0*gz + q1*gy - q2*gx) * halfT
+q3i = ((kinematics_q0 * temp_z) + (kinematics_q1 * temp_y) - (kinematics_q2 * temp_x)) * halfT
+
+' q0 += q0i
+kinematics_q0 = kinematics_q0 + q0i
+
+' q1 += q1i
+kinematics_q1 = kinematics_q1 + q1i 
+
+' q2 += q2i
+kinematics_q2 = kinematics_q2 + q2i
+
+' q3 += q3i
+kinematics_q3 = kinematics_q3 + q3i
+
+' ---------------------------------------------------------------------------------------
+' Normalize quaternion
+' norm = sqrt(q0*q0 + q1*q1 + q2*q2 + q3*q3)
+norm = sqrt((kinematics_q0**2) + (kinematics_q1**2) + (kinematics_q2**2) + (kinematics_q3**2))
+
+' q0 = q0 / norm
+kinematics_q0 = kinematics_q0 / norm
+
+' q1 = q1 / norm
+kinematics_q1 = kinematics_q1 / norm
+
+' q2 = q2 / norm
+kinematics_q2 = kinematics_q2 / norm
+
+' q3 = q3 / norm
+kinematics_q3 = kinematics_q3 / norm
+
+
+' -------------------------------------------------------------
+' Function 6: KinematicsEulerAngles
+' -------------------------------------------------------------
+#function KinematicsEulerAngles
+
+' kinematics_angle_x = atan2(2 * (q0*q1 + q2*q3), 1 - 2 *(q1*q1 + q2*q2))
+kinematics_angle_x = atan2(2 * ((kinematics_q0 * kinematics_q1) + (kinematics_q2 * kinematics_q3)), 1 - (2 * ((kinematics_q1**2) + (kinematics_q2**2))))
+
+' kinematics_angle_y = asin(2 * (q0*q2 - q1*q3))
+kinematics_angle_y = asin(2 * ((kinematics_q0 * kinematics_q2) - (kinematics_q1 * kinematics_q3)))
+
+' kinematics_angle_z = atan2(2 * (q0*q3 + q1*q2), 1 - 2 *(q2*q2 + q3*q3))
+kinematics_angle_z = atan2(2 * ((kinematics_q0 * kinematics_q3) + (kinematics_q1 * kinematics_q2)), 1 - (2 * ((kinematics_q2**2) + (kinematics_q3**2))))
+
+
+' -------------------------------------------------------------
+' Function 7: MagMeasure
+' -------------------------------------------------------------
+#function MagMeasure
+' roll			equ temporary_1
+' pitch			equ temporary_2
+cos_roll		equ temporary_3
+sin_roll		equ temporary_4
+cos_pitch		equ temporary_5
+sin_pitch		equ temporary_6
+'temp_mag_x		equ temporary_7
+'temp_mag_y		equ temporary_8
+norm			equ temporary_9
+mag_offset_x	equ temporary_10
+mag_offset_y	equ temporary_11
+mag_offset_z	equ temporary_12
+mag_scale_x		equ temporary_13
+mag_scale_y		equ temporary_14
+mag_scale_z		equ temporary_15
+
+#asm
+EELOAD, mag_scale_x, 245
+EELOAD, mag_scale_y, 244
+EELOAD, mag_scale_z, 243
+EELOAD, mag_offset_x, 242
+EELOAD, mag_offset_y, 241
+EELOAD, mag_offset_z, 240
+#endasm
+
+' mag_measured_x = (mag_x * mag_scale_x) + mag_offset_x
+mag_measured_x = (mag_x * mag_scale_x) + mag_offset_x
+
+' mag_measured_y = (mag_y * mag_scale_y) + mag_offset_y
+mag_measured_y = (mag_y * mag_scale_y) + mag_offset_y
+
+' mag_measured_z = (mag_z * mag_scale_z) + mag_offset_z
+mag_measured_z = (mag_z * mag_scale_z) + mag_offset_z
+
+' cos_roll = cos(roll)
+cos_roll = cos(kinematics_angle_x)
+
+' sin_roll = sin(roll)
+sin_roll = sin(kinematics_angle_x)
+
+' cos_pitch = cos(pitch)
+cos_pitch = cos(kinematics_angle_y)
+
+' sin_pitch = sin(pitch)
+sin_pitch = sin(kinematics_angle_y)
+
+' temp_mag_x = (mag_measured_x * cos_pitch) + (mag_measured_y * sin_roll * sin_pitch) + (measured_mag_z * cos_roll * sin_pitch)
+' can get rid of register mag_tilt_compensated_y if desired and go back to temp_mag_y register (line below)
+'OLD LINE GOOD: temp_mag_x = (mag_measured_x * cos_pitch) + (mag_measured_y * sin_roll * sin_pitch) + (mag_measured_z * cos_roll * sin_pitch)
+mag_tilt_compensated_x = (mag_measured_x * cos_pitch) + (mag_measured_y * sin_roll * sin_pitch) + (mag_measured_z * cos_roll * sin_pitch)
+
+' temp_mag_y = (mag_measured_y * cos_roll) - (mag_measured_z * sin_roll)
+' can get rid of register mag_tilt_compensated_y if desired and go back to temp_mag_y register (line below)
+'OLD LINE GOOD: temp_mag_y = (mag_measured_y * cos_roll) - (mag_measured_z * sin_roll)
+mag_tilt_compensated_y = (mag_measured_y * cos_roll) - (mag_measured_z * sin_roll)
+
+' norm = sqrt(temp_mag_x ^ 2 + temp_mag_y ^ 2)
+norm = sqrt((mag_tilt_compensated_x**2) + (mag_tilt_compensated_y**2))
+
+' mag_heading_x = temp_mag_x / norm
+mag_heading_x = mag_tilt_compensated_x / norm
+
+' mag_heading_y = -1 * (temp_mag_y / norm)
+' We need to flip the y axis to adhere to our logical right hand coordinate system. The sign was removed above with "FPOWI, 2" instruction.
+mag_heading_y = -(mag_tilt_compensated_y / norm)
+
+
+
+' -------------------------------------------------------------
+' Function 8: MagCalculateHeading
+' -------------------------------------------------------------
+#function MagCalculateHeading
+lkpAcc					equ temporary_1
+lkiAcc					equ temporary_2
+lkpMag					equ lkpAcc
+' lkiMag				equ temporary_3, not used so it is not implemented, just here as a note
+lhalfT					equ temporary_3
+norm					equ temporary_4
+hx						equ temporary_5
+hy						equ temporary_6
+hz						equ temporary_7
+bx						equ temporary_8
+bz						equ hz
+vx						equ temporary_9
+vy						equ temporary_10
+vz						equ temporary_11
+wx						equ temporary_12
+wy						equ temporary_13
+q0i						equ temporary_14
+q1i						equ temporary_15
+q2i						equ temporary_16
+q3i						equ temporary_17
+exAcc					equ temporary_18
+eyAcc					equ temporary_19
+ezAcc					equ temporary_20
+ezMag					equ temporary_21
+ax						equ temporary_22
+ay						equ temporary_23
+az						equ temporary_24
+mx						equ temporary_25
+my						equ temporary_26
+mz						equ temporary_27
+gx						equ temporary_28
+gy						equ temporary_29
+gz						equ temporary_30
+
+' ---------------------------------------------------------------------------------------------------------------
+' Constant values that are copied into temporary registers prior to a call to this function are:
+' lkpAcc = 0.2, lkiAcc = 0.0005, lkpMag = 0.2, lkiMag = 0.0005 (i.e. lkiMag not used and so just here for note)
+' (i.e. lkpAcc = lkpMag = 0.2 and so they use the same register as implemented above using aliases)
+
+' lhalfT = G_Dt/2
+
+' bz = hz and so they use the same register as implemented above using aliases. Just here for a note.
+
+' Naming convention for comments below are:
+'   acceleromter vector is (ax, ay, az)
+'   gyroscope vector is (gx, gy, gz)
+'   magnetometer vector is (mx, my, mz)
+' ---------------------------------------------------------------------------------------------------------------
+
+' lhalfT = G_Dt / 2
+lhalfT = lhalfT / 2
+
+' -----------------------------------------------------------------------------------------------------------
+' Normalize the measurements
+' -----------------------------------------------------------------------------------------------------------
+' norm = sqrt(ax*ax + ay*ay + az*az)
+' ax = ax / norm
+' ay = ay / norm
+' az = az / norm
+ax = accel_filtered_x
+ay = accel_filtered_y
+az = accel_filtered_z
+norm = sqrt((ax**2) + (ay**2) + (az**2))
+
+ax = ax / norm
+ay = ay / norm
+az = az / norm
+
+' Normalize the measurements
+' norm = sqrt(mx*mx + my*my + mz*mz)
+' mx = mx / norm
+' my = my / norm
+' mz = mz / norm
+mx = mag_measured_x
+my = mag_measured_y
+mz = mag_measured_z
+norm = sqrt((mx**2) + (my**2) + (mz**2))
+
+mx = mx / norm
+my = my / norm
+mz = mz / norm
+
+' -----------------------------------------------------------------------------------------------------------
+' Compute reference direction of flux
+' -----------------------------------------------------------------------------------------------------------
+' hx = mx * 2*(0.5 - lq2*lq2 - lq3*lq3) + my * 2*(lq1*lq2 - lq0*lq3)       + mz * 2*(lq1*lq3 + lq0*lq2)
+hx = (mx*2*(0.5-(mag_kinematics_lq2*mag_kinematics_lq2)-(mag_kinematics_lq3*mag_kinematics_lq3))) + (my*2*((mag_kinematics_lq1*mag_kinematics_lq2)-(mag_kinematics_lq0*mag_kinematics_lq3))) + (mz*2*((mag_kinematics_lq1*mag_kinematics_lq3)+(mag_kinematics_lq0*mag_kinematics_lq2)))
+
+' hy = mx * 2*(lq1*lq2 + lq0*lq3)       + my * 2*(0.5 - lq1*lq1 - lq3*lq3) + mz * 2*(lq2*lq3 - lq0*lq1)
+hy = (mx*2*((mag_kinematics_lq1*mag_kinematics_lq2)+(mag_kinematics_lq0*mag_kinematics_lq3))) + (my*2*(0.5-(mag_kinematics_lq1*mag_kinematics_lq1)-(mag_kinematics_lq3*mag_kinematics_lq3))) + (mz*2*((mag_kinematics_lq2*mag_kinematics_lq3)-(mag_kinematics_lq0*mag_kinematics_lq1)))
+
+' hz = mx * 2*(lq1*lq3 - lq0*lq2)       + my * 2*(lq2*lq3 + lq0*lq1)       + mz * 2*(0.5 - lq1*lq1 - lq2*lq2)
+hz = (mx*2*((mag_kinematics_lq1*mag_kinematics_lq3)-(mag_kinematics_lq0*mag_kinematics_lq2))) + (my*2*((mag_kinematics_lq2*mag_kinematics_lq3)+(mag_kinematics_lq0*mag_kinematics_lq1))) + (mz*2*(0.5-(mag_kinematics_lq1*mag_kinematics_lq1)-(mag_kinematics_lq2*mag_kinematics_lq2)))
+
+' bx = sqrt((hx*hx) + (hy*hy))
+bx = sqrt((hx**2) + (hy**2))
+
+' bz = hz (do nothing here, implemented with a register alias above)
+
+' -----------------------------------------------------------------------------------------------------------
+' Estimated direction of gravity and flux (v and w)
+' -----------------------------------------------------------------------------------------------------------
+' vx = 2*(lq1*lq3 - lq0*lq2)
+vx = 2*((mag_kinematics_lq1*mag_kinematics_lq3) - (mag_kinematics_lq0*mag_kinematics_lq2))
+
+' vy = 2*(lq0*lq1 + lq2*lq3)
+vy = 2*((mag_kinematics_lq0*mag_kinematics_lq1) + (mag_kinematics_lq2*mag_kinematics_lq3))
+
+' vz = lq0*lq0 - lq1*lq1 - lq2*lq2 + lq3*lq3
+vz = (mag_kinematics_lq0**2) - (mag_kinematics_lq1**2) - (mag_kinematics_lq2**2) + (mag_kinematics_lq3**2)
+
+' wx = bx * 2*(0.5 - lq2*lq2 - lq3*lq3) + bz * 2*(lq1*lq3 - lq0*lq2)
+wx = (bx*2*(0.5 - (mag_kinematics_lq2**2) - (mag_kinematics_lq3**2))) + (bz*2*((mag_kinematics_lq1*mag_kinematics_lq3) - (mag_kinematics_lq0*mag_kinematics_lq2)))
+
+' wy = bx * 2*(lq1*lq2 - lq0*lq3)       + bz * 2*(lq0*lq1 + lq2*lq3)
+wy = (bx*2*((mag_kinematics_lq1*mag_kinematics_lq2) - (mag_kinematics_lq0*mag_kinematics_lq3))) + (bz*2*((mag_kinematics_lq0*mag_kinematics_lq1) + (mag_kinematics_lq2*mag_kinematics_lq3)))
+
+' -----------------------------------------------------------------------------------------------------------
+' Error is sum of cross product between reference direction of fields and direction measured by sensors
+' -----------------------------------------------------------------------------------------------------------
+' exAcc = (vy*az - vz*ay)
+exAcc = (vy*az) - (vz*ay)
+
+' eyAcc = (vz*ax - vx*az)
+eyAcc = (vz*ax) - (vx*az)
+
+' ezAcc = (vx*ay - vy*ax)
+ezAcc = (vx*ay) - (vy*ax)
+
+' ezMag = (mx*wy - my*wx)
+ezMag = (mx*wy) - (my*wx)
+
+' -----------------------------------------------------------------------------------------------------------
+' Integral error scaled integral gain
+' -----------------------------------------------------------------------------------------------------------
+' lexInt = lexInt + exAcc*lkiAcc
+mag_kinematics_lexint = mag_kinematics_lexint + (exAcc*lkiAcc)
+
+' leyInt = leyInt + eyAcc*lkiAcc
+mag_kinematics_leyint = mag_kinematics_leyint + (eyAcc*lkiAcc)
+
+' lezInt = lezInt + ezAcc*lkiAcc
+mag_kinematics_lezint = mag_kinematics_lezint + (ezAcc*lkiAcc)
+
+' -----------------------------------------------------------------------------------------------------------
+' Adjusted gyroscope measurements
+' -----------------------------------------------------------------------------------------------------------
+gx = gyro_filtered_x
+gy = gyro_filtered_y
+gz = gyro_filtered_z
+
+' gx = gx + lkpAcc*exAcc + lexInt
+gx = gx + (lkpAcc*exAcc) + mag_kinematics_lexint
+
+' gy = gy + lkpAcc*eyAcc + leyInt
+gy = gy + (lkpAcc*eyAcc) + mag_kinematics_leyint
+
+' gz = gz + lkpAcc*ezAcc + ezMag*lkpMag + lezInt
+gz = gz + (lkpAcc*ezAcc) + (ezMag*lkpMag) + mag_kinematics_lezint
+
+' -----------------------------------------------------------------------------------------------------------
+' Integrate quaternion rate and normalize
+' -----------------------------------------------------------------------------------------------------------
+' q0i = (-lq1*gx - lq2*gy - lq3*gz) * lhalfT
+q0i = ((-mag_kinematics_lq1*gx) - (mag_kinematics_lq2*gy) - (mag_kinematics_lq3*gz)) * lhalfT
+
+' q1i = ( lq0*gx + lq2*gz - lq3*gy) * lhalfT
+q1i = ((mag_kinematics_lq0*gx) + (mag_kinematics_lq2*gz) - (mag_kinematics_lq3*gy)) * lhalfT
+
+' q2i = ( lq0*gy - lq1*gz + lq3*gx) * lhalfT
+q2i = ((mag_kinematics_lq0*gy) - (mag_kinematics_lq1*gz) + (mag_kinematics_lq3*gx)) * lhalfT
+
+' q3i = ( lq0*gz + lq1*gy - lq2*gx) * lhalfT
+q3i = ((mag_kinematics_lq0*gz) + (mag_kinematics_lq1*gy) - (mag_kinematics_lq2*gx)) * lhalfT
+
+' lq0 += q0i
+mag_kinematics_lq0 = mag_kinematics_lq0 + q0i
+
+' lq1 += q1i
+mag_kinematics_lq1 = mag_kinematics_lq1 + q1i
+
+' lq2 += q2i
+mag_kinematics_lq2 = mag_kinematics_lq2 + q2i
+
+' lq3 += q3i
+mag_kinematics_lq3 = mag_kinematics_lq3 + q3i
+
+' -----------------------------------------------------------------------------------------------------------
+' Normalize quaternion
+' -----------------------------------------------------------------------------------------------------------
+' norm = sqrt(lq0*lq0 + lq1*lq1 + lq2*lq2 + lq3*lq3)
+' lq0 = lq0 / norm
+' lq1 = lq1 / norm
+' lq2 = lq2 / norm
+' lq3 = lq3 / norm
+norm = sqrt((mag_kinematics_lq0**2) + (mag_kinematics_lq1**2) + (mag_kinematics_lq2**2) + (mag_kinematics_lq3**2))
+mag_kinematics_lq0 = mag_kinematics_lq0 / norm
+mag_kinematics_lq1 = mag_kinematics_lq1 / norm
+mag_kinematics_lq2 = mag_kinematics_lq2 / norm
+mag_kinematics_lq3 = mag_kinematics_lq3 / norm
+
+' -----------------------------------------------------------------------------------------------------------
+' Calculate Euler angles
+' -----------------------------------------------------------------------------------------------------------
+' Not used so it is not implemented, just here as a note
+' heading angle x = atan2(2 * (lq0*lq1 + lq2*lq3), 1 - 2 *(lq1*lq1 + lq2*lq2))
+
+' Not used so it is not implemented, just here as a note
+' heading angle y = asin(2 * (lq0*lq2 - lq1*lq3))
+
+' heading angle z = atan2(2 * (lq0*lq3 + lq1*lq2), 1 - 2 *(lq2*lq2 + lq3*lq3))
+' mag_true_north_heading = heading angle z
+mag_true_north_heading = atan2(2*((mag_kinematics_lq0*mag_kinematics_lq3) + (mag_kinematics_lq1*mag_kinematics_lq2)), 1 - (2*((mag_kinematics_lq2**2) + (mag_kinematics_lq3**2))))
+
+' NOTE: atan2 uses 2 values instead of 1 in order to gather information on the signs of the inputs in order to return
+'       the appropriate quadrant of the computed angle, which is not possible using single value arctangent function.
+'
+'       It's the angle in radians between the positive x axis and the point given by the (x, y) coordinates. The angle
+'       is positive for counterclockwise angles and negative for clockwise ones. So it produces results in the range of (-pi, pi]
+'
+'       Map to values in the range [0, 2pi) by adding 2pi to negative results. (i.e. [a, b) is intervale notation)
+
+' -----------------------------------------------------------------------------------------------------------
+' Apply compass declination if using GPS (not implemented, just here as a note)
+' -----------------------------------------------------------------------------------------------------------
+' JAT: Basically this results in the sample angle but expressed as a value always between -180 deg and 180 deg
+'      Draw it up on a unit circle to see.
+'
+'      e.g. Angle 4 radians turns into - 2.28 radians
+'           Angle -4 radians turns into +2.28 radians
+'           Same angle in both cases just expressed to always be between -pi rads and pi rads
+'#if defined UseGPS
+'   if( compassDeclination != 0.0 ) 
+'	{
+'		trueNorthHeading = trueNorthHeading + compassDeclination;
+'		if (trueNorthHeading > M_PI)  // Angle normalization (-180 deg, 180 deg)
+'		{  
+'			trueNorthHeading -= (2.0 * M_PI);
+'		} 
+'		else if (trueNorthHeading < -M_PI)
+'		{
+'			trueNorthHeading += (2.0 * M_PI);
+'		}
+'	}
+'#endif 
+
+' -------------------------------------------------------------
+' Function 9: MagCalculatePositiveHeading
+' -------------------------------------------------------------
+'
+' NOTE: atan2 uses 2 values instead of 1 in order to gather information on the signs of the inputs in order to return
+'       the appropriate quadrant of the computed angle, which is not possible using single value arctangent function.
+'
+'       It's the angle in radians between the positive x axis and the point given by the (x, y) coordinates. The angle
+'       is positive for counterclockwise angles and negative for clockwise ones. So it produces results in the range of (-pi, pi]
+'
+'       Map to values in the range [0, 2pi) by adding 2pi to negative results. (i.e. [a, b) is intervale notation)
+'
+#function MagCalculatePositiveHeading
+output_heading				equ temporary_1
+
+#asm
+'COPY, mag_true_north_heading, output_heading
+
+SELECTA, output_heading, FCMPI, 0
+BRA, LT, _2pi
+BRA, _end
+
+_2pi:
+FWRITE0, 6.283185
+FADD0
+
+_end:
+
+#endasm
+
+' -------------------------------------------------------------
+' Function 10: MagCalculateAbsoluteHeading
+' -------------------------------------------------------------
+'
+' NOTE: atan2 uses 2 values instead of 1 in order to gather information on the signs of the inputs in order to return
+'       the appropriate quadrant of the computed angle, which is not possible using single value arctangent function.
+'
+'       It's the angle in radians between the positive x axis and the point given by the (x, y) coordinates. The angle
+'       is positive for counterclockwise angles and negative for clockwise ones. So it produces results in the range of (-pi, pi]
+'
+'       Map to values in the range [0, 2pi) by adding 2pi to negative results. (i.e. [a, b) is intervale notation)
+'
+#function MagCalculateAbosulteHeading
+absolute_heading				equ temporary_2
+
+absolute_heading = atan2(mag_heading_y, mag_heading_x)
+temporary_1 = absolute_heading
+MagCalculatePositiveHeading
+
+
+' ===============================================================================================================
+' EEPROM Functions
+' ===============================================================================================================
+
+' -------------------------------------------------------------
+' Function Slot 0: AccelInitFourthOrder
+' -------------------------------------------------------------
+#eefunction AccelInitFourthOrder
+const_neg_one_g		equ temporary_1
+#asm
+
+' Initilialize data for the cheby2(4, 60, 12.5/50) low pass filter
+
+EELOAD, const_neg_one_g, 239
+
+SELECTA, lpf_cheby2_fourth_order_input_tm1_x
+FSETI, 0
+SELECTA, lpf_cheby2_fourth_order_input_tm2_x
+FSETI, 0
+SELECTA, lpf_cheby2_fourth_order_input_tm3_x
+FSETI, 0
+SELECTA, lpf_cheby2_fourth_order_input_tm4_x
+FSETI, 0
+
+SELECTA, lpf_cheby2_fourth_order_output_tm1_x
+FSETI, 0
+SELECTA, lpf_cheby2_fourth_order_output_tm2_x
+FSETI, 0
+SELECTA, lpf_cheby2_fourth_order_output_tm3_x
+FSETI, 0
+SELECTA, lpf_cheby2_fourth_order_output_tm4_x
+FSETI, 0
+
+SELECTA, lpf_cheby2_fourth_order_input_tm1_y
+FSETI, 0
+SELECTA, lpf_cheby2_fourth_order_input_tm2_y
+FSETI, 0
+SELECTA, lpf_cheby2_fourth_order_input_tm3_y
+FSETI, 0
+SELECTA, lpf_cheby2_fourth_order_input_tm4_y
+FSETI, 0
+
+SELECTA, lpf_cheby2_fourth_order_output_tm1_y
+FSETI, 0
+SELECTA, lpf_cheby2_fourth_order_output_tm2_y
+FSETI, 0
+SELECTA, lpf_cheby2_fourth_order_output_tm3_y
+FSETI, 0
+SELECTA, lpf_cheby2_fourth_order_output_tm4_y
+FSETI, 0
+
+SELECTA, lpf_cheby2_fourth_order_input_tm1_z
+FSET, const_neg_one_g
+SELECTA, lpf_cheby2_fourth_order_input_tm2_z
+FSET, const_neg_one_g
+SELECTA, lpf_cheby2_fourth_order_input_tm3_z
+FSET, const_neg_one_g
+SELECTA, lpf_cheby2_fourth_order_input_tm4_z
+FSET, const_neg_one_g
+
+SELECTA, lpf_cheby2_fourth_order_output_tm1_z
+FSET, const_neg_one_g
+SELECTA, lpf_cheby2_fourth_order_output_tm2_z
+FSET, const_neg_one_g
+SELECTA, lpf_cheby2_fourth_order_output_tm3_z
+FSET, const_neg_one_g
+SELECTA, lpf_cheby2_fourth_order_output_tm4_z
+FSET, const_neg_one_g
+
+#endasm
+
+
+' -------------------------------------------------------------
+' Function Slot 26: MagInitializeHeadingFusion
+' -------------------------------------------------------------
+#eefunction MagInitializeHeadingFusion
+roll_angle				equ temporary_1
+pitch_angle				equ temporary_2
+yaw_angle				equ temporary_3
+roll_angle_div2			equ roll_angle
+pitch_angle_div2		equ pitch_angle
+yaw_angle_div2			equ temporary_4
+
+#asm
+' -------------------------------------------------------------------------------------
+' Initialization values:
+' ax = 0, ay = 0, az = -9.80665, and so we can greatly simplify the calculations below
+' -------------------------------------------------------------------------------------
+
+' norm = sqrt(ax*ax + ay*ay + az*az)
+' norm = sqrt(-9.80665 * -9.80665)
+' norm = 9.80665
+
+' ax = ax / norm
+' ax = 0 / norm = 0
+
+' ay = ay / norm
+' ay = 0 / norm = 0
+
+' az = az / norm
+' az = -9.80665 / norm = -1
+
+' roll_angle = -1 * atan2(ay, sqrt(ax*ax+az*az))
+' roll_angle = -1 * atan2(0, sqrt(-9.80665 * -9.80665))
+' roll_angle = -1 * atan2(0, 9.80665)
+' roll_angle = -1 * 0 = 0
+SELECTA, roll_angle, CLRA
+
+' pitch_angle = atan2(ax, sqrt(ay*ay+az*az))
+' pitch_angle = atan2(0, sqrt(-9.80665 * -9.80665))
+' pitch_angle = atan2(0, 9.80665)
+' pitch_angle = 0
+SELECTA, pitch_angle, CLRA
+
+' yaw_angle = atan2(mag_heading_y, mag_heading_x)
+SELECTA, yaw_angle, FSET, mag_heading_y
+ATAN2, mag_heading_x
+
+' heading angle x = roll_angle, not used so it is not implemented, just here as a note
+' heading angle y = pitch_angle, not used so it is not implemented, just here as a note
+' heading angle z = yaw_angle = mag_true_north_heading
+COPY, yaw_angle, mag_true_north_heading
+
+' Divide roll_angle, pitch_angle and yaw_angle by 2 and store in temporary registers to simply the calculations
+' of lq0, lq1, lq2 and lq3. "roll_angle / 2 = 0" so just use roll_angle. "pitch_angle / 2 = 0" so just use 
+' pitch_angle. Thus we only need to calculate "yaw_angle / 2".
+' NOTE: roll_angle_div2 is just an alias for roll_angle (see above)
+' NOTE: pitch_angle_div2 is just an alias for pitch_angle (see above)
+SELECTA, yaw_angle_div2, FSET, yaw_angle, FDIVI, 2
+
+' lq0 = cos(rollAngle/2)*cos(pitchAngle/2)*cos(yawAngle/2) + sin(rollAngle/2)*sin(pitchAngle/2)*sin(yawAngle/2)
+SELECTA, mag_kinematics_lq0
+LEFT, FSET, roll_angle_div2, COS, RIGHT
+FSET0
+LEFT, FSET, pitch_angle_div2, COS, RIGHT
+FMUL0
+LEFT, FSET, yaw_angle_div2, COS, RIGHT
+FMUL0
+LEFT, FSET, roll_angle_div2, SIN, LEFT, FSET, pitch_angle_div2, SIN, LEFT, FSET, yaw_angle_div2, SIN, RIGHT, FMUL0, RIGHT, FMUL0, RIGHT
+FADD0
+
+' lq1 = sin(rollAngle/2)*cos(pitchAngle/2)*cos(yawAngle/2) - cos(rollAngle/2)*sin(pitchAngle/2)*sin(yawAngle/2)
+SELECTA, mag_kinematics_lq1
+LEFT, FSET, roll_angle_div2, SIN, RIGHT
+FSET0
+LEFT, FSET, pitch_angle_div2, COS, RIGHT
+FMUL0
+LEFT, FSET, yaw_angle_div2, COS, RIGHT
+FMUL0
+LEFT, FSET, roll_angle_div2, COS, LEFT, FSET, pitch_angle_div2, SIN, LEFT, FSET, yaw_angle_div2, SIN, RIGHT, FMUL0, RIGHT, FMUL0, RIGHT
+FSUB0
+
+' lq2 = cos(rollAngle/2)*sin(pitchAngle/2)*cos(yawAngle/2) + sin(rollAngle/2)*cos(pitchAngle/2)*sin(yawAngle/2)
+SELECTA, mag_kinematics_lq2
+LEFT, FSET, roll_angle_div2, COS, RIGHT
+FSET0
+LEFT, FSET, pitch_angle_div2, SIN, RIGHT
+FMUL0
+LEFT, FSET, yaw_angle_div2, COS, RIGHT
+FMUL0
+LEFT, FSET, roll_angle_div2, SIN, LEFT, FSET, pitch_angle_div2, COS, LEFT, FSET, yaw_angle_div2, SIN, RIGHT, FMUL0, RIGHT, FMUL0, RIGHT
+FADD0
+
+' lq3 = cos(rollAngle/2)*cos(pitchAngle/2)*sin(yawAngle/2) - sin(rollAngle/2)*sin(pitchAngle/2)*cos(yawAngle/2)
+SELECTA, mag_kinematics_lq3
+LEFT, FSET, roll_angle_div2, COS, RIGHT
+FSET0
+LEFT, FSET, pitch_angle_div2, COS, RIGHT
+FMUL0
+LEFT, FSET, yaw_angle_div2, SIN, RIGHT
+FMUL0
+LEFT, FSET, roll_angle_div2, SIN, LEFT, FSET, pitch_angle_div2, SIN, LEFT, FSET, yaw_angle_div2, COS, RIGHT, FMUL0, RIGHT, FMUL0, RIGHT
+FSUB0
+
+' lexint = 0
+CLR, mag_kinematics_lexint
+
+' leyint = 0
+CLR, mag_kinematics_leyint
+
+' lezint = 0
+CLR, mag_kinematics_lezint
+
+' lkpAcc = 0.2, this is copied into a temporary register prior to calling function MagCalculateHeading (just a note)
+' lkiAcc = 0.0005, this is copied into a temporary register prior to calling function MagCalculateHeading (just a note)
+' lkpMag = 0.2, this is copied into a temporary register prior to calling function MagCalculateHeading (just a note)
+' lkiMag = 0.0005, this is copied into a temporary register prior to calling function MagCalculateHeading (just a note)
+
+#endasm
+
+' -------------------------------------------------------------
+' Function Slot 72: GyroResetSum
+'   - Zero sample count and sum registers
+' -------------------------------------------------------------
+#eefunction GyroResetSum
+#asm
+CLR, gyro_x_sum_of_samples
+CLR, gyro_y_sum_of_samples
+CLR, gyro_z_sum_of_samples
+CLR, gyro_number_of_samples
+#endasm
+
+' -------------------------------------------------------------
+' Function Slot 75: AccelResetSum
+' -------------------------------------------------------------
+#eefunction AccelResetSum
+#asm
+CLR, accel_x_sum_of_samples
+CLR, accel_y_sum_of_samples
+CLR, accel_z_sum_of_samples
+CLR, accel_number_of_samples
+#endasm
+
+' -------------------------------------------------------------
+' Function Slot 78: AccelComputeBias (Offset)
+' -------------------------------------------------------------
+#eefunction AccelComputeBias
+accel_ms2_scale_x			equ temporary_1
+accel_ms2_scale_y			equ temporary_2
+accel_ms2_scale_z			equ temporary_3
+'slot 255 is accel offset x
+'slot 254 is accel offset y
+'slot 253 is accel offset z
+const_neg_one_g				equ temporary_4
+#asm
+
+' Do not divide by zero
+' IF accel_number_of_samples == 0
+' GOTO _end
+SELECTA, accel_number_of_samples
+FCMPI, 0
+BRA, Z, _end
+
+EELOAD, accel_ms2_scale_x, 252
+EELOAD, accel_ms2_scale_y, 251
+EELOAD, accel_ms2_scale_z, 250
+EELOAD, const_neg_one_g, 239
+
+' x ---------------------------------------
+' -1 * ((x_sum_samples / num_samples) * scale_factor)
+' we multiply by -1 since we want the offset to be negative, later we will add it to our adc values
+SELECTA, accel_x_sum_of_samples
+FDIV, accel_number_of_samples
+FMUL, accel_ms2_scale_x
+FMULI, -1
+EESAVE, accel_x_sum_of_samples, 255
+
+' y ---------------------------------------
+' -1 * ((y_sum_samples / num_samples) * scale_factor)
+' we multiply by -1 since we want the offset to be negative, later we will add it to our adc values
+SELECTA, accel_y_sum_of_samples
+FDIV, accel_number_of_samples
+FMUL, accel_ms2_scale_y
+FMULI, -1
+EESAVE, accel_y_sum_of_samples, 254
+
+' z ---------------------------------------
+' (-1 * ((z_sum_samples / num_samples) * scale_factor) - 9.80665)
+' we multiply by -1 since we want the offset to be negative, later we will add it to our adc values
+' we subtract by 9.80665 to account for gravity (see notes for function accel_compute_bias() in adxl345.c)
+SELECTA, accel_z_sum_of_samples
+FDIV, accel_number_of_samples
+FMUL, accel_ms2_scale_z
+FMULI, -1
+FADD, const_neg_one_g
+EESAVE, accel_z_sum_of_samples, 253
+
+' accel one g -----------------------------
+' Only used after this if altitude hold is defined with a barometer or range finder
+' So I won't be using this for now
+'SELECTA, accel_actual_one_g
+'FSET, accel_z_sum_of_samples 
+'FADD, accel_offset_z
+'FABS
+
+_end:
+' CLR, accel_x_sum_of_samples
+' CLR, accel_y_sum_of_samples
+' CLR, accel_z_sum_of_samples
+' CLR, accel_number_of_samples
+
+#endasm
+
+
+#end
+' -------------------------------------------------------------
+' Calculations
+' Radius = distance / 1000
+' areaIn = ROUND(area)
