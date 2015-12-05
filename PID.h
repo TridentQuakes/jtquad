@@ -18,25 +18,25 @@
    ================================================================================================ */
    
 enum {
-  RATE_XAXIS_PID_IDX = 0,			// rate mode
-  RATE_YAXIS_PID_IDX,				// rate mode
-  ZAXIS_PID_IDX,					// rate and attitude modes
-  ATTITUDE_XAXIS_PID_IDX,			// attittude mode (accel)
-  ATTITUDE_YAXIS_PID_IDX,			// attittude mode (accel)
-  HEADING_HOLD_PID_IDX,				// heading hold feature turned ON
-  ATTITUDE_GYRO_XAXIS_PID_IDX,		// attitude mode (gyro)
-  ATTITUDE_GYRO_YAXIS_PID_IDX,      // attitude mode (gyro)
+	RATE_XAXIS_PID_IDX = 0,			// rate mode
+	RATE_YAXIS_PID_IDX,				// rate mode
+	ZAXIS_PID_IDX,					// rate and attitude modes
+	ATTITUDE_XAXIS_PID_IDX,			// attittude mode (accel)
+	ATTITUDE_YAXIS_PID_IDX,			// attittude mode (accel)
+	HEADING_HOLD_PID_IDX,				// heading hold feature turned ON
+	ATTITUDE_GYRO_XAXIS_PID_IDX,		// attitude mode (gyro)
+	ATTITUDE_GYRO_YAXIS_PID_IDX,      // attitude mode (gyro)
 
-  LAST_PID_IDX  // keep this
+	LAST_PID_IDX  // keep this
 };
 
 struct PIDdata {
-  double P, I, D;
-  double lastError;
-  // AKA experiments with PID
-  double previousPIDTime;
-  double integratedError;
-  double windupGuard;
+	double P, I, D;
+	double lastError;
+	// AKA experiments with PID
+	double previousPIDTime;
+	double integratedError;
+	double windupGuard;
 } PID[LAST_PID_IDX];
 
 /* ================================================================================================
