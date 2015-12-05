@@ -16,7 +16,7 @@
 	#define STRING_ACCEL_INIT					"ADXL345 initialization complete"
 	#define STRING_GYRO_INIT					"ITG3200 initialization complete"
 	#define STRING_TMP102_INIT					"TMP102 initialization complete"
-	#define STRING_MAG_INIT						"HMC5843 initialization complete"
+	#define STRING_MAG_INIT						"HMC5883L initialization complete"
 	#define STRING_INIT_ERROR					"An error occurred during the initialization process"
 	
 	#define STRING_GYRO_CALIBRATION_START		"ITG3200 calibration start (will not complete until gyro is stable) ..."

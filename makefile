@@ -85,7 +85,7 @@ SRC = 	$(TARGET).c \
 		spi.c \
 		error.c \
 		fpu.c \
-		hmc5843.c \
+		hmc5883L.c \
 		itg3200.c \
 		adxl345.c \
 		pcportal.c \

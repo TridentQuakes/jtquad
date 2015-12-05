@@ -64,7 +64,7 @@ void fpu_init_eeprom_defaults(void)
 	// Previously calculated offset based off of raw data (216,-101,418)
 	// Recently calculated (x,y) offset based off of measured data (-58.106, -102.9005)
 	// Measured data had a scale applied of (0.981, 0.985) that was calculated automatically
-	// using the self-test feature of HMC5843. The data was collected by rotating the board
+	// using the self-test feature of HMC5883L. The data was collected by rotating the board
 	// 360 degrees in the xy plane. Did not bother with z axis since it doesn't matter in my
 	// case
 	mag_offset.x = -58.106;
@@ -109,7 +109,7 @@ void fpu_load_eeprom_data(void)
 	fpu_eeprom_write_double_to_slot(mag_offset.z, FPU_EEPROM_SLOT_MAG_OFFSET_Z);
 	#endif
 	
-	// NOTE: Mag scale is calculated using HMC5843 self test feature during initialization
+	// NOTE: Mag scale is calculated using HMC5883L self test feature during initialization
 	
 	// Constants
 	// Negative 1g

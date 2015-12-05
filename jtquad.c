@@ -191,7 +191,7 @@ void initialize_fpu(void)
 }
 
 /* ----------------------------------------------------------------------------
-   Initialize Magnetometer (HMC5843 or HMC5883)
+   Initialize Magnetometer (HMC5883L or HMC5883)
    ---------------------------------------------------------------------------- */
 #ifdef HMC5883L
 void initialize_mag(void)

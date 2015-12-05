@@ -8,7 +8,7 @@
    Includes
    ================================================================================================ */
    
-	#include "hmc5843.h"
+	#include "hmc5883L.h"
 
 /* ================================================================================================
    Externs
@@ -21,25 +21,25 @@
    Defines
    ================================================================================================ */
 
-	#define HMC5843_FORMAT 				HMC5843_DATA_OUT_10HZ | HMC5843_DATA_OUT_NORMAL
-	#define HMC5843_SELF_TEST_FORMAT 	HMC5843_DATA_OUT_POS_BIAS | HMC5843_DATA_OUT_10HZ
+	#define HMC5883L_FORMAT 				HMC5883L_DATA_OUT_10HZ | HMC5883L_DATA_OUT_NORMAL
+	#define HMC5883L_SELF_TEST_FORMAT 	HMC5883L_DATA_OUT_POS_BIAS | HMC5883L_DATA_OUT_10HZ
 	
 /* ================================================================================================
    Globals
    ================================================================================================ */
 #ifdef HMC5883L
-	const unsigned char hmc5843_init_data[8] = {
-			HMC5843_MODE, HMC5843_MODE_IDLE,
-			HMC5843_CONFIG_A, HMC5843_FORMAT,				// 0x00: 10hz (default), normal (these are the defaults)
-			HMC5843_CONFIG_B, HMC5843_GAIN_1_GA,			// 0x01: +/- 1.0ga gain
-			HMC5843_MODE, HMC5843_MODE_SINGLE				// 0x02: start single measurement
+	const unsigned char hmc5883L_init_data[8] = {
+			HMC5883L_MODE, HMC5883L_MODE_IDLE,
+			HMC5883L_CONFIG_A, HMC5883L_FORMAT,				// 0x00: 10hz (default), normal (these are the defaults)
+			HMC5883L_CONFIG_B, HMC5883L_GAIN_1_GA,			// 0x01: +/- 1.0ga gain
+			HMC5883L_MODE, HMC5883L_MODE_SINGLE				// 0x02: start single measurement
 	};
 
-	const unsigned char hmc5843_self_test_data[8] = {
-			HMC5843_MODE, HMC5843_MODE_IDLE,
-			HMC5843_CONFIG_A, HMC5843_SELF_TEST_FORMAT,		// 0x00: 10hz (default), normal
-			HMC5843_CONFIG_B, HMC5843_GAIN_1_GA,			// 0x01: +/- 1.0ga gain
-			HMC5843_MODE, HMC5843_MODE_SINGLE				// 0x02: single measurement
+	const unsigned char hmc5883L_self_test_data[8] = {
+			HMC5883L_MODE, HMC5883L_MODE_IDLE,
+			HMC5883L_CONFIG_A, HMC5883L_SELF_TEST_FORMAT,		// 0x00: 10hz (default), normal
+			HMC5883L_CONFIG_B, HMC5883L_GAIN_1_GA,			// 0x01: +/- 1.0ga gain
+			HMC5883L_MODE, HMC5883L_MODE_SINGLE				// 0x02: single measurement
 	};
 #endif
 
@@ -63,56 +63,56 @@ int mag_initialize(void)
 	if(ERR_SUCCESS != res)
 	{
 		report_error(res);
-		return ERR_HMC5843_INIT;
+		return ERR_HMC5883L_INIT;
 	}
 	
-	res = mag_twi_read(HMC5843_ID_A, &devIDA);
+	res = mag_twi_read(HMC5883L_ID_A, &devIDA);
 	
 	if(ERR_SUCCESS != res)
 	{
 		report_error(res);
-		report_error(ERR_HMC5843_READ);
-		return ERR_HMC5843_INIT;
+		report_error(ERR_HMC5883L_READ);
+		return ERR_HMC5883L_INIT;
 	}
 	
-	res = mag_twi_read(HMC5843_ID_B, &devIDB);
+	res = mag_twi_read(HMC5883L_ID_B, &devIDB);
 	
 	if(ERR_SUCCESS != res)
 	{
 		report_error(res);
-		report_error(ERR_HMC5843_READ);
-		return ERR_HMC5843_INIT;
+		report_error(ERR_HMC5883L_READ);
+		return ERR_HMC5883L_INIT;
 	}
 	
-	res = mag_twi_read(HMC5843_ID_C, &devIDC);
+	res = mag_twi_read(HMC5883L_ID_C, &devIDC);
 	
 	if(ERR_SUCCESS != res)
 	{
 		report_error(res);
-		report_error(ERR_HMC5843_READ);
-		return ERR_HMC5843_INIT;
+		report_error(ERR_HMC5883L_READ);
+		return ERR_HMC5883L_INIT;
 	}
 	
 	if( devIDA != 'H' || devIDB != '4' || devIDC != '3' )
 	{
-		return ERR_HMC5843_INVALID_ID;
+		return ERR_HMC5883L_INVALID_ID;
 	}
 	
 	for(int i = 0; i < 8; i += 2)
 	{
-		reg = hmc5843_init_data[i];								// get register
-		res = mag_twi_write(reg, hmc5843_init_data[i + 1]);	// write data
+		reg = hmc5883L_init_data[i];								// get register
+		res = mag_twi_write(reg, hmc5883L_init_data[i + 1]);	// write data
 		
 		if(ERR_SUCCESS != res)
 		{
 			report_error(res);
-			report_error(ERR_HMC5843_WRITE);
-			return ERR_HMC5843_INIT;
+			report_error(ERR_HMC5883L_WRITE);
+			return ERR_HMC5883L_INIT;
 		}
 	}
 	
 	// Critical -- wait for the first measurement to be taken and placed in x, y and z registers
-	_delay_ms(HMC5843_10HZ_WAIT);
+	_delay_ms(HMC5883L_10HZ_WAIT);
 	
 	// The first reading is performed with roll (kinematics_angle_x) and pitch (kinematics_angle_y) both 
 	// equal to zero (i.e. quadcopter is flat). The kinematics angles are zero from the call to initialize
@@ -149,7 +149,7 @@ int mag_measure(void)
      * the internal pointer back to the x register. Also x, y, z comes in the order of 
      * MSB followed by LSB. */
     TWI_MasterRead(&twi_master_mag,
-		                    HMC5843_SLAVE_ADDRESS,
+		                    HMC5883L_SLAVE_ADDRESS,
                         7);
 		
 	while (twi_master_mag.status != TWIM_STATUS_READY);
@@ -161,7 +161,7 @@ int mag_measure(void)
 	
 	if(twi_master_mag.bytesRead != 7)
 	{
-		return ERR_HMC5843_READ;
+		return ERR_HMC5883L_READ;
 	}
 	
 	// Flip the y and z axes so that y+ points to the right and z+ points down to the ground (x points forward)
@@ -178,13 +178,13 @@ int mag_measure(void)
 	//fpu_wait();
 	
 	// Start single measurement
-	res = mag_twi_write(HMC5843_MODE, HMC5843_MODE_SINGLE);	
+	res = mag_twi_write(HMC5883L_MODE, HMC5883L_MODE_SINGLE);	
 		
 	if(ERR_SUCCESS != res)
 	{
 		report_error(res);
-		report_error(ERR_HMC5843_WRITE);
-		//return ERR_HMC5843_WRITE;
+		report_error(ERR_HMC5883L_WRITE);
+		//return ERR_HMC5883L_WRITE;
 	}
 
 	return res;
@@ -193,7 +193,7 @@ int mag_measure(void)
 
 /* ----------------------------------------------------------------------------
    Perform a self-test
-     - self-test is a built in feature of HMC5843 to calculate the scale factor
+     - self-test is a built in feature of HMC5883L to calculate the scale factor
 	 - self-test takes 2 measurements, calculates the difference and places them
 	   in the x, y and z registers for us to read
 	 - first measurement is with no artificial magnetic field applied
@@ -212,25 +212,25 @@ int mag_selftest(void)
 	unsigned char reg;
 	int res = ERR_SUCCESS;
 	
-	// Put hmc5843 into self test mode
+	// Put hmc5883L into self test mode
 	for(int i = 0; i < 8; i += 2)
 	{
-		reg = hmc5843_self_test_data[i];							// get register
-		res = mag_twi_write(reg, hmc5843_self_test_data[i + 1]);	// write data
+		reg = hmc5883L_self_test_data[i];							// get register
+		res = mag_twi_write(reg, hmc5883L_self_test_data[i + 1]);	// write data
 		
 		if(ERR_SUCCESS != res)
 		{
 			report_error(res);
-			report_error(ERR_HMC5843_WRITE);
-			return ERR_HMC5843_SELF_TEST;
+			report_error(ERR_HMC5883L_WRITE);
+			return ERR_HMC5883L_SELF_TEST;
 		}
 	}
 	
-	_delay_ms(HMC5843_10HZ_WAIT);
+	_delay_ms(HMC5883L_10HZ_WAIT);
 	
 	// read scale vector (target is 0.55 ga or 715 adc units) (range is 0 - 1300 +-1.0ga)
 	TWI_MasterRead(&twi_master_mag,
-		                    HMC5843_SLAVE_ADDRESS,
+		                    HMC5883L_SLAVE_ADDRESS,
                         6);
 		
 	while (twi_master_mag.status != TWIM_STATUS_READY);
@@ -238,13 +238,13 @@ int mag_selftest(void)
 	if(twi_master_mag.result != TWIM_RESULT_OK)
 	{
 		report_error(process_twi_error(&twi_master_mag.result));
-		return ERR_HMC5843_SELF_TEST;
+		return ERR_HMC5883L_SELF_TEST;
 	}
 	
 	if(twi_master_mag.bytesRead != 6)
 	{
-		report_error(ERR_HMC5843_READ);
-		return ERR_HMC5843_SELF_TEST;
+		report_error(ERR_HMC5883L_READ);
+		return ERR_HMC5883L_SELF_TEST;
 	}
 	
 	int x, y, z;
@@ -254,9 +254,9 @@ int mag_selftest(void)
 	z = ((twi_master_mag.readData[4] << 8) | twi_master_mag.readData[5]);
 	
 	double scale_x, scale_y, scale_z;
-	scale_x = HMC5843_SELFTEST_TARGET_1_0_GA / (double)x;
-	scale_y = HMC5843_SELFTEST_TARGET_1_0_GA / (double)y;
-	scale_z = HMC5843_SELFTEST_TARGET_1_0_GA / (double)z;
+	scale_x = HMC5883L_SELFTEST_TARGET_1_0_GA / (double)x;
+	scale_y = HMC5883L_SELFTEST_TARGET_1_0_GA / (double)y;
+	scale_z = HMC5883L_SELFTEST_TARGET_1_0_GA / (double)z;
 	
 	fpu_eeprom_write_double_to_slot(scale_x, FPU_EEPROM_SLOT_MAG_SCALE_X);
 	fpu_eeprom_write_double_to_slot(scale_y, FPU_EEPROM_SLOT_MAG_SCALE_Y);
@@ -287,7 +287,7 @@ int mag_read_vector(void)
      * the internal pointer back to the x register. Also x, y, z comes in the order of 
      * MSB followed by LSB. */
     TWI_MasterRead(&twi_master_mag,
-		                    HMC5843_SLAVE_ADDRESS,
+		                    HMC5883L_SLAVE_ADDRESS,
                         7);
 		
 	while (twi_master_mag.status != TWIM_STATUS_READY);
@@ -299,7 +299,7 @@ int mag_read_vector(void)
 	
 	if(twi_master_mag.bytesRead != 7)
 	{
-		return ERR_HMC5843_READ;
+		return ERR_HMC5883L_READ;
 	}
 	
 	// Flip the y and z axes so that y+ points to the right and z+ points down to the ground (x points forward)
@@ -333,7 +333,7 @@ int mag_twi_read(uint8_t reg, uint8_t *pValue)
 	*pValue = 0;
 	
 	TWI_MasterWriteRead(&twi_master_mag,
-						HMC5843_SLAVE_ADDRESS,
+						HMC5883L_SLAVE_ADDRESS,
 						&buf,
 						1,1);
 	
@@ -346,7 +346,7 @@ int mag_twi_read(uint8_t reg, uint8_t *pValue)
 	
 	if(twi_master_mag.bytesRead != 1)
 	{
-		return ERR_HMC5843_READ;
+		return ERR_HMC5883L_READ;
 	}
 	
 	*pValue = (int)twi_master_mag.readData[0];
@@ -368,7 +368,7 @@ int mag_twi_write(uint8_t reg, uint8_t value)
 	buf[1] = value;
 	
 	TWI_MasterWrite(&twi_master_mag,
-						HMC5843_SLAVE_ADDRESS,
+						HMC5883L_SLAVE_ADDRESS,
 						buf,
 						2);
 	
@@ -381,7 +381,7 @@ int mag_twi_write(uint8_t reg, uint8_t value)
 	
 	if(twi_master_mag.bytesWritten != 2)
 	{
-		return ERR_HMC5843_WRITE;
+		return ERR_HMC5883L_WRITE;
 	}
 
 	return res;

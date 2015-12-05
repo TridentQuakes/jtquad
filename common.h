@@ -123,7 +123,7 @@
 	#include "pcportal.h"
 	#include "numeric_typedefs.h"
 	#ifdef HMC5883L
-	#include "hmc5843.h"
+	#include "hmc5883L.h"
 	#endif
 	#include "itg3200.h"
 	#include "adxl345.h"
