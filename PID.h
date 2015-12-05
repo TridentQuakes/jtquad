@@ -14,7 +14,7 @@
 	#include "common.h"
 
 /* ================================================================================================
-   ENUM and Struct
+   PID Variables
    ================================================================================================ */
    
 enum {
@@ -30,7 +30,6 @@ enum {
   LAST_PID_IDX  // keep this
 };
 
-// PID Variables
 struct PIDdata {
   double P, I, D;
   double lastError;
