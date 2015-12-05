@@ -19,28 +19,18 @@
    ---------------------------------------------------------------------------- */
 ISR(TCC0_OVF_vect)
 {
-	// Toggle LED
+	// Toggle LED on port H
 	PORT_TogglePins( &PORTH, 0x01 );
 }
 
 /* ----------------------------------------------------------------------------
-   Overflow Interrupt Routine: 1024us (976.5625Hzhz)
+   Overflow Interrupt Routine: 1024us (976.5625hz)
    ---------------------------------------------------------------------------- */
 ISR(TCC1_OVF_vect)
 {
 	// Used by the micros function
 	++timer_tcc1_overflow_count;
 }
-
-/* ----------------------------------------------------------------------------
-   Overflow Interrupt Routine: 1ms (1000hz)
-   ---------------------------------------------------------------------------- */
-/*ISR(TCD0_OVF_vect)
-{
-	// Used by the millis function
-	timer_tcd0_overflow_count++;
-}
-*/
 
 /* ----------------------------------------------------------------------------
    Overflow Interrupt Routine: (2.5ms) (400hz)
@@ -79,26 +69,17 @@ ISR(TCD1_OVF_vect)
 		app_execute |= APP_EXECUTE_10B_bm;
 	}
 	
-	// used for testing
-	if(timer_tcd1_overflow_count % 40 == 0)	// 10 hz tasks b
-	{
-		
-		app_execute |= APP_EXECUTE_10_bm;
-	}
-	
-	// Used to control 400hz loop
+	// Increment timer overflow count
 	++timer_tcd1_overflow_count;
-	
-	/*if(timer_tcd1_overflow_count > 39)
-	{
-		timer_tcd1_overflow_count = 0;
-	}*/
 }
 
 /* ================================================================================================
    Initialization Routines
    ================================================================================================ */
 
+/* ----------------------------------------------------------------------------
+   Initialize clocks
+   ---------------------------------------------------------------------------- */
 void initialize_clock_32mhz(void)
 {
 	// Enable the external oscillator, 16 MHz
@@ -116,39 +97,46 @@ void initialize_clock_32mhz(void)
 	CLKSYS_Disable(OSC_RC2MEN_bm);
 }
 
-/*void initialize_clock_16mhz(void)
-{
-	CLKSYS_XOSC_Config( OSC_FRQRANGE_12TO16_gc, false, OSC_XOSCSEL_XTAL_16KCLK_gc );
-	CLKSYS_Enable( OSC_XOSCEN_bm );
-	CLKSYS_Prescalers_Config( CLK_PSADIV_1_gc , CLK_PSBCDIV_1_1_gc );
-	do {} while ( CLKSYS_IsReady( OSC_XOSCRDY_bm ) == 0 );
-	CLKSYS_Main_ClockSource_Select( CLK_SCLKSEL_XOSC_gc );
-}*/
-
+/* ----------------------------------------------------------------------------
+   Initiliaze IO
+   
+   // NOTE: The xmega internal pullups where not good enough for TWI to ITG3200 
+            communication.
+   ---------------------------------------------------------------------------- */
 void initialize_io(void)
 {
 	// PH0 as output pin for flashing LED
 	PORT_SetDirection(&PORTH, PIN0_bm);
 	PORT_SetOutputValue( &PORTH, PIN0_bm);
 	
-	// These internal pullups where not good enough to TWI communication with ITG3200
-	//PORTE.DIRSET |= 0x03;
-	//PORTE.PIN0CTRL = PORT_OPC_WIREDANDPULL_gc;
-	//PORTE.PIN1CTRL = PORT_OPC_WIREDANDPULL_gc;
+	
 }
 
+/* ----------------------------------------------------------------------------
+   Initialize defaults
+   ---------------------------------------------------------------------------- */
 void initialize_defaults(void)
 {
 	fpu_init_eeprom_defaults();
 }
 
+/* ----------------------------------------------------------------------------
+   Enable Interrupts
+   ---------------------------------------------------------------------------- */
 void enable_interrupts(void)
 {
-	/* Enable low interrupt level in PMIC and enable global interrupts. */
+	// Enable low interrupt level
 	PMIC.CTRL |= PMIC_LOLVLEN_bm;
+	
+	// Enable global interrupts
 	sei();
 }
 
+/* ----------------------------------------------------------------------------
+   Initialize Timers
+   
+     - Initialize the system timers assuming MCU running at 32mhz
+   ---------------------------------------------------------------------------- */
 void initialize_timers_32mhz(void)
 {
 	// ************************************************************************
@@ -159,33 +147,29 @@ void initialize_timers_32mhz(void)
 	TC0_ConfigClockSource( &TCC0, TC_CLKSEL_DIV1024_gc );
 	
 	// ************************************************************************
-	// Timer for micros function
+	// Timer: 1024us (976.5625hz)
 	// ************************************************************************
-	//   - Overflow every 1024us (976.5625Hz)
-	//   - 1024 was chosen for efficiency since it is a power of 2, micros can
-	//     simply left shift 10 positions for multiplication
+	//   - Used by micros() functions
+	//   - 1024us chosen for efficiency, power of 2, left/right shift for 
+	//     multiplicaiton/division
 	TC_SetPeriod( &TCC1, 0x7fff );
 	TC1_SetOverflowIntLevel( &TCC1, TC_OVFINTLVL_LO_gc);
 	TC1_ConfigClockSource( &TCC1, TC_CLKSEL_DIV1_gc );
 	
 	// ************************************************************************
-	// Timer for millis function
+	// Timer: 2.5 ms (400hz)
 	// ************************************************************************
-	//   - Overflow every 1ms (1000hz)
-	//TC_SetPeriod( &TCD0, 0x7cff );
-	//TC0_SetOverflowIntLevel( &TCD0, TC_OVFINTLVL_LO_gc);
-	//TC0_ConfigClockSource( &TCD0, TC_CLKSEL_DIV1_gc );
-	
-	// ************************************************************************
-	// Timer for main application
-	// ************************************************************************
-	//   - 400hz, 2.5ms
+	//   - Used to control the main loop speed
 	TC_SetPeriod( &TCD1, 0x9c3f );
 	TC1_SetOverflowIntLevel( &TCD1, TC_OVFINTLVL_LO_gc);
 	TC1_ConfigClockSource( &TCD1, TC_CLKSEL_DIV2_gc );
-	
 }
 
+/* ----------------------------------------------------------------------------
+   Initialize FPU
+   
+     - umFPU v3.1
+   ---------------------------------------------------------------------------- */
 void initialize_fpu(void)
 {
 	int ret = fpu_initialize();
@@ -206,6 +190,9 @@ void initialize_fpu(void)
 	}
 }
 
+/* ----------------------------------------------------------------------------
+   Initialize Magnetometer (HMC5843 or HMC5883)
+   ---------------------------------------------------------------------------- */
 #ifdef HMC5883L
 void initialize_mag(void)
 {
@@ -222,6 +209,9 @@ void initialize_mag(void)
 }
 #endif
 
+/* ----------------------------------------------------------------------------
+   Initialize accelerometer (ADXL345)
+   ---------------------------------------------------------------------------- */
 void initialize_accel(void)
 {
 	int ret = accel_initialize();
@@ -236,6 +226,9 @@ void initialize_accel(void)
 	}
 }
 
+/* ----------------------------------------------------------------------------
+   Initialize gyroscope (ITG3200)
+   ---------------------------------------------------------------------------- */
 void initialize_gyro(void)
 {
 	int ret = gyro_initialize();
@@ -256,18 +249,20 @@ void initialize_gyro(void)
 
 /* ----------------------------------------------------------------------------
    Process Critical Sensors
-     - Process critical sensors 4 times per 400hz loop
+     - This gets called at a rate of 400hz
+	 - Sum up as many sample as possible before the next round of calculations,
+	   which is 4 samples since the calculations are done at a rate of 100hz
+	 - NOTE: Acceleromter and gyroscope are currently sampling at 200hz
    ---------------------------------------------------------------------------- */
 void process_critical_sensors()
 {
-	// Both sensors sample the data rates are 200 hz (1/2 sample rate)
 	accel_read_vector_and_sum();
 	gyro_read_vector_and_sum();
 }
 
 /* ----------------------------------------------------------------------------
    Process 100hz Tasks
-     - Process accelerometer and run data through the low pass filter
+     - Process accelerometer and run data through the low pass filter (lpf)
 	 - Process the gyroscope
 	 - Calculate the vehicle attitude (kinematics)
 	 - Process flight control
@@ -277,51 +272,22 @@ void process_100hz_tasks(void)
 	// STEP1: Time elapsed since the last time we executed this task
 	G_Dt = (current_time - previous_time_100hz_tasks) / 1000000.0;
 	previous_time_100hz_tasks = current_time;
-
-	#ifdef MEGANEURA_DEBUG
-	temp_time = micros();
-	#endif			
-	// STEP2: Use accumulated samples to calculate average of samples and then apply 1g scale factor and a runtime bias (offset) 
+		
+	// STEP2: Use accumulated samples to calculate average of samples and 
+	//        then apply 1g scale factor and a runtime bias (offset) 
 	accel_evaluate_ms2();
-	#ifdef MEGANEURA_DEBUG
-	time_accel_eval_ms2 = micros() - temp_time;
-	#endif
-			
-	#ifdef MEGANEURA_DEBUG
-	temp_time = micros();
-	#endif	
+	
 	// STEP3: Run accel data through low pass filter
 	compute_fourth_order();
-	#ifdef MEGANEURA_DEBUG
-	time_fourth_order = micros() - temp_time;
-	#endif
 	
-	#ifdef MEGANEURA_DEBUG
-	temp_time = micros();
-	#endif
 	// STEP4: Evaluate the rotational velocity using the gyro
 	gyro_evaluate_rate();
-	#ifdef MEGANEURA_DEBUG
-	time_gyro_evaluate_rate = micros() - temp_time;
-	#endif
-	
-	#ifdef MEGANEURA_DEBUG
-	temp_time = micros();
-	#endif	
+		
 	// STEP5: Get description of rotation of quadcopter
 	calculate_kinematics();
-	#ifdef MEGANEURA_DEBUG
-	time_calc_kinematics = micros() - temp_time;
-	#endif
 	
-	#ifdef MEGANEURA_DEBUG
-	temp_time = micros();
-	#endif
 	// STEP6: Process flight control
-	process_flight_control();
-	#ifdef MEGANEURA_DEBUG
-	time_process_flight_control = micros() - temp_time;
-	#endif	
+	process_flight_control();	
 }
 
 /* ----------------------------------------------------------------------------
@@ -333,7 +299,8 @@ void process_50hz_tasks(void)
 	G_Dt = (current_time - previous_time_50hz_tasks) / 1000000.0;
 	previous_time_50hz_tasks = current_time;
 	
-	// Read the pilot's commands and perform grounded functions based on stick configuration (mode 2)
+	// Read the pilot's commands and perform grounded functions based on stick
+	// configuration (mode 2)
 	read_pilot_commands();
 }
 
@@ -341,7 +308,7 @@ void process_50hz_tasks(void)
    Process 10hz Tasks 1
      - Process the magnetometer and calculate the true north heading
 	 - Magnetic declination not applied at this time so true north heading
-	   represents magnetics north and not true north
+	   represents magnetic north and not true north
    ---------------------------------------------------------------------------- */
 void process_10hz_tasks_1(void)
 {
@@ -356,8 +323,8 @@ void process_10hz_tasks_1(void)
 
 /* ----------------------------------------------------------------------------
    Process 10hz Tasks 2 (low priority tasks 1)
-     - Read serial commands
-	 - Send serial telemetry
+     - Read user's serial commands
+	 - Perform serial telemetry tasks
    ---------------------------------------------------------------------------- */
 void process_10hz_tasks_2(void)
 {
@@ -376,20 +343,19 @@ void process_10hz_tasks_2(void)
 
 /* ================================================================================================
    Main Loop
-     - Max speed when processing accelerometer was approximately 2500hz
-	 - Main loop runs at 400hz
-	 - One frame is 1s and frame counter is incremented at 100hz
+     - Loop runs at 400hz
+	 - Process tasks at 400, 100, 50 and 10 hz
+		- 400: process critical sensors (accelerometer and gyroscope)
+		- 100: Do calculations
+		- 50: Read pilot commands
+		- 10: Sample magnetometer, calculate heading, send/receive serial data  
+     
+	 NOTE: Max speed when processing accelerometer was approximately 2500hz
    ================================================================================================ */
 void main_loop(void)
 {	
 	for(;;)
 	{
-		#ifdef MEGANEURA_DEBUG
-		app_events = 0;
-		uint32_t time_400=0, time_100=0, time_50=0, time_10a=0, time_10b=0;
-		uint32_t time_400_ts=0, time_100_ts=0, time_50_ts=0, time_10a_ts=0, time_10b_ts=0;
-		#endif
-		
 		current_time = micros();
 		heading_time = micros();
 		
@@ -402,26 +368,8 @@ void main_loop(void)
 		// 400Hz task loop (2.5ms)
 		// ********************************************************************
 		if( app_execute_buf & APP_EXECUTE_400_bm )
-		{
-			//app_execute &= ~APP_EVENT_400_bm;
-			
-			#ifdef MEGANEURA_DEBUG
-			//bit_set_(app_events, APP_EVENT_400_bp);
-			app_events |= APP_EVENT_400_bm;
-			#endif
-			//previous_time_400hz = current_time;
-			
-			#ifdef MEGANEURA_DEBUG
-			//usart_tx_string("400");
-			//time_critical_tasks_start = micros();
-			time_400_ts = micros();
-			#endif
-			
+		{		
 			process_critical_sensors();
-			#ifdef MEGANEURA_DEBUG
-			//time_critical_tasks = micros() - time_critical_tasks_start;
-			time_400 = micros() - time_400_ts;
-			#endif
 		}
 		
 		// ********************************************************************
@@ -429,24 +377,7 @@ void main_loop(void)
 		// ********************************************************************
 		if( app_execute_buf & APP_EXECUTE_100_bm )
 		{	
-			//app_execute &= ~APP_EVENT_100_bm;
-			
-			#ifdef MEGANEURA_DEBUG
-			//bit_set_(app_events, APP_EVENT_100_bp);
-			app_events |= APP_EVENT_100_bm;
-			#endif
-			//frame_counter++;
-			
-			#ifdef MEGANEURA_DEBUG
-			//usart_tx_string("100");
-			//time_100hz_tasks_start = micros();
-			time_100_ts = micros();
-			#endif
 			process_100hz_tasks();
-			#ifdef MEGANEURA_DEBUG
-			//time_100hz_tasks = micros() - time_100hz_tasks_start;
-			time_100_ts = micros() - time_100_ts;
-			#endif
 		}
 		
 		// ================================================================
@@ -454,20 +385,7 @@ void main_loop(void)
 		// ================================================================
 		if ( app_execute_buf & APP_EXECUTE_50_bm )
 		{
-			//app_execute &= ~APP_EXECUTE_50_bm;
-			
-			#ifdef MEGANEURA_DEBUG
-			//bit_set_(app_events, APP_EVENT_50_bp);
-			app_events |= APP_EVENT_50_bm;
-			//usart_tx_string("50");
-			//time_50hz_tasks_start = micros();
-			time_50_ts = micros();
-			#endif
 			process_50hz_tasks();
-			#ifdef MEGANEURA_DEBUG
-			//time_50hz_tasks = micros() - time_50hz_tasks_start;
-			time_50 = micros() - time_50_ts;
-			#endif
 		}
 			
 		// ****************************************************************
@@ -475,98 +393,16 @@ void main_loop(void)
 		// ****************************************************************
 		if ( app_execute_buf & APP_EXECUTE_10A_bm )
 		{ 
-			//app_execute &= ~APP_EXECUTE_10A_bm;
-			
-			#ifdef MEGANEURA_DEBUG
-			//bit_set_(app_events, APP_EVENT_10A_bp);
-			app_events |= APP_EVENT_10A_bm;
-			//usart_tx_string("10a");
-			//time_10ahz_tasks_start = micros();
-			time_10a_ts = micros();
-			#endif
 			process_10hz_tasks_1();
-			#ifdef MEGANEURA_DEBUG
-			//time_10ahz_tasks = micros() - time_10ahz_tasks_start;
-			time_10a = micros() - time_10a_ts;
-			#endif
 		}
 		
 		if( app_execute_buf & APP_EXECUTE_10B_bm )
 		{
-			//app_execute &= ~APP_EXECUTE_10B_bm;
-			
-			#ifdef MEGANEURA_DEBUG
-			//bit_set_(app_events, APP_EVENT_10B_bp);
-			app_events |= APP_EVENT_10B_bm;
-			//usart_tx_string("10b");
-			//time_10bhz_tasks_start = micros();
-			time_10b_ts = micros();
-			#endif
 			process_10hz_tasks_2();
-			#ifdef MEGANEURA_DEBUG
-			//time_10bhz_tasks = micros() - time_10bhz_tasks_start;
-			time_10b = micros() - time_10b_ts;
-			#endif
 		}
 		
-		
-		
-		// Wait until all FPU instructions have been processed over the FPU's 256 byte buffer will overflow.
-		// NOTE: In the future more waits may be needed if there are more than 256 bytes of instructions per loop.
-
-		
-		#ifdef MEGANEURA_DEBUG
-		// update loop times with the latest
-		if( app_execute_buf & APP_EXECUTE_400_bm )
-		{
-			time_critical_tasks = time_400;
-		}
-		if( app_execute_buf & APP_EXECUTE_100_bm )
-		{
-			time_100hz_tasks = time_100;
-		}
-		if( app_execute_buf & APP_EXECUTE_50_bm )
-		{
-			time_50hz_tasks = time_50;
-		}
-		if( app_execute_buf & APP_EXECUTE_10A_bm )
-		{
-			time_10ahz_tasks = time_10a;
-		}
-		if( app_execute_buf & APP_EXECUTE_10B_bm )
-		{
-			time_10bhz_tasks = time_10b;
-		}
-		
-		if( (app_execute_buf & APP_EXECUTE_400_bm) &&
-		    (app_execute_buf & APP_EXECUTE_100_bm) )
-		{
-			loop_time = micros() - current_time;
-		}
-		
-		#if 0
-		if(app_events)
-		{
-			usart_tx_string((app_events & APP_EVENT_400_bm)? "X\t" : " \t");
-			usart_tx_string((app_events & APP_EVENT_100_bm)? "X\t" : " \t");
-			usart_tx_string((app_events & APP_EVENT_50_bm)? "X\t" : " \t");
-			usart_tx_string((app_events & APP_EVENT_10A_bm)? "X\t" : " \t");
-			usart_tx_string((app_events & APP_EVENT_10B_bm)? "X\t" : " \t");
-			usart_tx_ul(loop_time);
-			usart_tx_string("\t");
-			usart_tx_ul(current_time);
-			usart_tx_string(LINE_END);
-		}
-		#endif
-		
-		
-		
-		// Clear tasks that we executed in this loop
-		ATOMIC_BLOCK(ATOMIC_RESTORESTATE)
-		{
-			app_execute &= ~app_execute_buf;
-		}
-		#endif
+		// Wait until all FPU instructions have been processed or the FPU's 256 byte buffer
+		// will overflow. NOTE: In the future more fpu 'waits' may be required
 	}
 }
 
@@ -575,6 +411,9 @@ void main_loop(void)
    ================================================================================================ */
 int main(void)
 {
+	// ************************************************************************
+	// General Init
+	// ************************************************************************
 	initialize_clock_32mhz();
 	initialize_io();
 	
@@ -591,11 +430,11 @@ int main(void)
 	_delay_ms(100);
 	
 	// ************************************************************************
-	// EEPROM
+	// MCU EEPROM
 	// ************************************************************************
-	#ifdef MEGANEURA_DEBUG
+#ifdef MEGANEURA_DEBUG
 	pc_send_string_resource(STRING_APP_READING_EEPROM);
-	#endif
+#endif
 	ds_initialize();
 	ds_read_eeprom_defaults();
 	
@@ -619,16 +458,15 @@ int main(void)
 	// Receiver
 	// ************************************************************************
 	
-	// initialize_receiver_from_eeprom();
 	
 	// ************************************************************************
 	// FPU
 	// ************************************************************************
 	initialize_fpu();
+	
 #ifdef MEGANEURA_DEBUG
 	pc_send_string_resource(STRING_FPU_INIT);
 #endif
-	
 	
 	// ************************************************************************
 	// FPU EEPROM
@@ -642,25 +480,31 @@ int main(void)
 	// Gyroscope
 	// ************************************************************************
 	initialize_gyro();
+	
 #ifdef MEGANEURA_DEBUG
 	pc_send_string_resource(STRING_GYRO_INIT);
 #endif
+
 	gyro_reset_sum();
+	
 #ifdef MEGANEURA_DEBUG
 	pc_send_string_resource(STRING_GYRO_CALIBRATION_START);
 #endif
-	while (!gyro_calibrate()) // this make sure the craft is still befor to continue init process
+
+	// This makes sure the quadcopter is still before beginning any calibration
+	while (!gyro_calibrate())
 	{
 #ifdef MEGANEURA_DEBUG
 		pc_send_string_resource(STRING_GYRO_CALIBRATION_FAIL);
 #endif
 	}
+	
 #ifdef MEGANEURA_DEBUG
 	pc_send_string_resource(STRING_GYRO_CALIBRATION_COMPLETE);
 #endif
 	
 	// ************************************************************************
-	// Accelerometer, EEPROM functions, low pass filter and kinematics
+	// Accelerometer, low pass filter and kinematics
 	// ************************************************************************
 	initialize_accel();
 #ifdef MEGANEURA_DEBUG
@@ -670,15 +514,16 @@ int main(void)
 
 	if(is_first_time_boot)
 	{
-		#ifdef MEGANEURA_DEBUG
+#ifdef MEGANEURA_DEBUG
 		pc_send_string_resource(STRING_ACCEL_CALIBRATION_START);
-		#endif
+#endif
 		
-		accel_compute_bias(); 	// take 400 samples at 400hz and then calculate bias (offset)
+		// take 400 samples at 400hz and then calculate bias (offset)
+		accel_compute_bias();
 
-		#ifdef MEGANEURA_DEBUG
+#ifdef MEGANEURA_DEBUG
 		pc_send_string_resource(STRING_ACCEL_CALIBRATION_COMPLETE);
-		#endif
+#endif
 	}
 	
 	init_fourth_oder();
@@ -689,14 +534,14 @@ int main(void)
 	// ************************************************************************
 	// Magnetometer
 	// ************************************************************************
-	initialize_mag(); // Assumes the craft is flat
+	// Assumes the craft is flat
+	initialize_mag();
 	initialize_heading_fusion();
 	
 #ifdef MEGANEURA_DEBUG
 	pc_send_string_resource(STRING_MAG_INIT);
 #endif	
 #endif
-	
 	
 	// ************************************************************************
 	// Timers
@@ -723,7 +568,6 @@ int main(void)
 	else
 	{
 		// Error initializing a peripheral device
-		//report_error();
 #ifdef MEGANEURA_DEBUG
 		pc_send_string_resource(STRING_INIT_ERROR);
 #endif
