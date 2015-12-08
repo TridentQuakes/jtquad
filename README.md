@@ -90,7 +90,48 @@ A quad-rotor helicopter drone built around an AVR XMEGA microcontroller and Micr
 
 ## Serial Commands
 
+### Write
+
+|Command	Action|Decription|
+|:--------------|:---------|
+X|Stop sending messages
+
+### Read
+
+|Command|Send output format|
+|:------|:-----------------|
+=|Reserved debug command|
+e|Send min_armed_throttle|
+f|Send_transmitter_smooth_factor|receiver_smooth_factor[1,2,3,4,5,6,7],dummy,dummy,dummy
+g|end transmitter_slope|receiver_slope[1,2,3,4,5,6,7]
+h|Send_transmitter_offset|receiver_offset[1,2,3,4,5,6,7]
+i|Send sensor data|gyro(x,y,z),accel(x,y,z),mag(x,y,z)
+j|Send mag raw sensor data|x,y,z	
+k|Send accel calibration data|offset(x,y,z),scale(x,y,z)
+l|Send accel raw sensor data|x,y,z
+m|Send mag calibration data|offset(x,y,z),scale(x,y,z)
+n|Send gyro calibration data|offset(x,y,z),scale
+o|
+p|
+q|
+r|Send vehicle attitude|kinematics_angle(x,y),heading
+s|Send all flight data|motors_armed,attitude(x,y,z),dummy,dummy,
+receiver_command(1,2,3,4,5,6,7),dummy,
+motor_command(1,2,3,4),dummy,dummy,dummy,
+dummy,dummy,flight_mode
+t|Send transmitter data|receiver_command[1,2,3,4,5,6,7]
+x|Stop sending messages|
+!|Send flight software version|
 
 ## Timers
 
-
+|Timer  |Description                        |
+|:------|:----------------------------------|
+TCC0|Use as a one second LED heartbeat
+TCC1|Used to implement the micros() function
+TCD0|Used for input capture of channels 0, 1, 2 and 3 on pins PA0, PA1, PA2 and PA3 respectively
+TCD1|Used to maintain a 400Hz application loop
+TCE0|Used for input capture of channels 4, 5 and 6 on pins PB0, PB1 and PB2 respectively
+TCE1|
+TCF0|Used for PWM output to the motor ESCs
+TCF1|
