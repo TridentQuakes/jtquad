@@ -11,7 +11,7 @@ A quad-rotor helicopter drone built around an AVR XMEGA microcontroller and Micr
 
 |Component             |Product                                              |
 |:---------------------|:----------------------------------------------------|
-|MCU                   |ATXMega128A1 AU with 16MHZ external crystal (runs at 32MHz with PLL)|
+|MCU                   |ATXMega128A1 AU with 16MHz external crystal (runs at 32MHz with PLL)|
 |FPU                   |UM-FPU v3.1|
 |Accelerometer         |ADXL345|                             
 |Gyroscope             |ITG3200|
@@ -103,7 +103,7 @@ X|Stop sending messages
 =|Reserved debug command|
 e|Send min_armed_throttle|
 f|Send_transmitter_smooth_factor|receiver_smooth_factor[1,2,3,4,5,6,7],dummy,dummy,dummy
-g|end transmitter_slope|receiver_slope[1,2,3,4,5,6,7]
+g|Send transmitter_slope|receiver_slope[1,2,3,4,5,6,7]
 h|Send_transmitter_offset|receiver_offset[1,2,3,4,5,6,7]
 i|Send sensor data|gyro(x,y,z),accel(x,y,z),mag(x,y,z)
 j|Send mag raw sensor data|x,y,z	
