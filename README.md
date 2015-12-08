@@ -98,7 +98,7 @@ X|Stop sending messages
 
 ### Read
 
-|Command|Description--------------|Output Format |
+|Command|Description              |Output Format |
 |:------|:------------------------|:-------------|
 =|Reserved debug command|
 e|Send min_armed_throttle|
@@ -115,10 +115,7 @@ o|
 p|
 q|
 r|Send vehicle attitude|kinematics_angle(x,y),heading
-s|Send all flight data|motors_armed,attitude(x,y,z),dummy,dummy,
-receiver_command(1,2,3,4,5,6,7),dummy,
-motor_command(1,2,3,4),dummy,dummy,dummy,
-dummy,dummy,flight_mode
+s|Send all flight data|motors_armed,attitude(x,y,z),dummy,dummy,receiver_command(1,2,3,4,5,6,7),dummy,motor_command(1,2,3,4),dummy,dummy,dummy,dummy,dummy,flight_mode
 t|Send transmitter data|receiver_command[1,2,3,4,5,6,7]
 x|Stop sending messages|
 !|Send flight software version|
