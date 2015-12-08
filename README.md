@@ -98,8 +98,8 @@ X|Stop sending messages
 
 ### Read
 
-|Command|Send output format|
-|:------|:-----------------|
+|Command|Description--------------|Output Format |
+|:------|:------------------------|:-------------|
 =|Reserved debug command|
 e|Send min_armed_throttle|
 f|Send_transmitter_smooth_factor|receiver_smooth_factor[1,2,3,4,5,6,7],dummy,dummy,dummy
