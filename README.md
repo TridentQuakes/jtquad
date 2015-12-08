@@ -10,7 +10,7 @@ A quad-rotor helicopter drone built around an AVR XMEGA microcontroller and Micr
 ## Hardware
 
 |Component             |Product                                              |
-|----------------------|-----------------------------------------------------|
+|:---------------------|-----------------------------------------------------|
 |MCU                   |ATXMega128A1 AU with 16MHZ external crystal (runs at 32MHz with PLL)|
 |FPU                   |UM-FPU v3.1|
 |Accelerometer         |ADXL345|                             
@@ -22,10 +22,12 @@ A quad-rotor helicopter drone built around an AVR XMEGA microcontroller and Micr
 |Radio Receiver        |AR7000 receiver outputs PWM signal|
 |3.3V Power Supply     |Custom design, powers MCU, FPU and sensors|
 |5V Power Supply       |Custom design, powers radio receiver and the TTL converters|
+|
 
 ## Pin Assignment
 
 |Pin   | Peripheral Description   |
+|------|--------------------------|
 |PA0|AR7000, channel 0, CCA
 |PA1|AR7000, channel 1, CCB
 |PA2|AR7000, channel 2,	CCC
