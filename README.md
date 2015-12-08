@@ -124,7 +124,7 @@ x|Stop sending messages|
 
 |Timer  |Description                        |
 |:------|:----------------------------------|
-TCC0|Use as a one second LED heartbeat
+TCC0|Used as a one second LED heartbeat
 TCC1|Used to implement the micros() function
 TCD0|Used for input capture of channels 0, 1, 2 and 3 on pins PA0, PA1, PA2 and PA3 respectively
 TCD1|Used to maintain a 400Hz application loop
