@@ -1,8 +1,8 @@
 # JTQuad
 
-A quad-rotor helicopter drone built around an AVR XMEGA microcontroller and Micromega FPU.
+Flight software, written in C and assembly, is processed on an AVR XMEGA microcontroller and aided by a Micromega FPU.
 
-* 9 degrees for freedom provided by a 3-axis accelerometer, gyroscope and magnetometer
+* 9 degrees of freedom provided by three-dimensional accelerometer, gyroscope and magnetometer
 * Radio controlled (PWM receiver)
 * 2 way USB to serial communications
 * Calibration routines and a safety lock
